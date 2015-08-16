@@ -11,5 +11,10 @@
     "JavaScript"
   ],
   "author": "teppo.kurki@iki.fi",
-  "license": "Apache 2"
+  "license": "Apache 2",
+  "dependencies": {
+    "ws": "^0.7.2",
+    "debug": "^2.2.0",
+    "bluebird": "^2.9.34"
+  }
 }
