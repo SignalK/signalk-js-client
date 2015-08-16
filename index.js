@@ -2,7 +2,6 @@ var WebSocket = require('ws');
 var debug = require('debug')('signalk:client');
 //var browser = require('./ui/util/browser');
 var Promise = require('bluebird');
-var mdns = require('mdns');
 
 function Client() {
 
@@ -17,6 +16,12 @@ Client.prototype.connect = function(options) {
 
 function discoverAndConnect(options) {
   debug("connect");
+  try {
+    var mdns = require('mdns');
+  } catch(ex) {
+    console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify host and port");
+    return
+  }
   return new Promise(function(resolve, reject) {
     var browser = mdns.createBrowser(mdns.tcp('signalk-ws'));
     browser.on('serviceUp', function(service) {
