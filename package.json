@@ -1,0 +1,15 @@
+{
+  "name": "signalk-client",
+  "version": "0.0.0",
+  "description": "Signal K JavaScript client\"",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "Signalk",
+    "JavaScript"
+  ],
+  "author": "teppo.kurki@iki.fi",
+  "license": "Apache 2"
+}
