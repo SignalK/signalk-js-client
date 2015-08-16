@@ -8,7 +8,14 @@ function Client() {
 
 }
 
-Client.prototype.connect = function(onData, onConnect, onDisconnect) {
+Client.prototype.connect = function(options) {
+  if (options.host && options.port) {
+    return connectDelta(options.host + ":" + options.port, options.onData, options.onConnect, options.onDisconnect, options.onError)
+  }
+  return discoverAndConnect(options);
+}
+
+function discoverAndConnect(options) {
   debug("connect");
   return new Promise(function(resolve, reject) {
     var browser = mdns.createBrowser(mdns.tcp('signalk-ws'));
@@ -20,12 +27,12 @@ Client.prototype.connect = function(onData, onConnect, onDisconnect) {
     debug("Starting mdns discovery");
     browser.start();
   }).then(function(service) {
-    return connectDelta(service.host + ":" + service.port, onData, onConnect, onDisconnect);
+    return connectDelta(service.host + ":" + service.port, options.onData, options.onConnect, options.onDisconnect, options.onError);
   });
 }
 
 
-function connectDelta(hostname, callback, onConnect, onDisconnect) {
+function connectDelta(hostname, callback, onConnect, onDisconnect, onError) {
   debug("Connecting to " + hostname);
   var url = "ws://" + hostname + "/signalk/stream/v1?stream=delta&context=self";
   if (typeof Primus != 'undefined') {
@@ -51,10 +58,13 @@ function connectDelta(hostname, callback, onConnect, onDisconnect) {
       debug("open");
       var sub = '{"context":"vessels.self","subscribe":[{"path":"*"}]}';
       connection.send(sub);
-      onConnect();
+      if (onConnect) onConnect();
     };
     connection.onerror = function(error) {
       debug("error:" + error);
+      if (onError) {
+        onError(error)
+      }
     };
     connection.onmessage = function(msg) {
       callback(JSON.parse(msg.data));
