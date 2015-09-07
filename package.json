@@ -13,8 +13,9 @@
   "author": "teppo.kurki@iki.fi",
   "license": "Apache 2",
   "dependencies": {
-    "ws": "^0.7.2",
+    "bluebird": "^2.9.34",
     "debug": "^2.2.0",
-    "bluebird": "^2.9.34"
+    "request-promise": "^0.4.3",
+    "ws": "^0.7.2"
   }
 }

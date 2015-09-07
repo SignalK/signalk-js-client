@@ -1,21 +1,34 @@
 var WebSocket = require('ws');
 var debug = require('debug')('signalk:client');
-//var browser = require('./ui/util/browser');
-var Promise = require('bluebird');
+var rp = require('request-promise');
 
-function Client() {
+function Client(host, port) {
+  this.host = host;
+  this.port = port;
+}
 
+Client.prototype.get = function(path) {
+  return rp('http://' + this.host + ':' + this.port + path).then(function(responseString) {
+    return JSON.parse(responseString);
+  });
 }
 
 Client.prototype.connect = function(options) {
-  if (options.host && options.port) {
+  debug('connect');
+  var host = this.host;
+  var port = this.port;
+  if (options) {
+    host = options.host || host;
+    port = options.port || port;
+  }
+  if (host && port) {
     return connectDelta(options.host + ":" + options.port, options.onData, options.onConnect, options.onDisconnect, options.onError)
   }
   return discoverAndConnect(options);
 }
 
 function discoverAndConnect(options) {
-  debug("connect");
+  debug('discoverAndConnect');
   try {
     var mdns = require('mdns');
   } catch(ex) {
