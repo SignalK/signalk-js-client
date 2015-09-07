@@ -1,6 +1,7 @@
 var WebSocket = require('ws');
 var debug = require('debug')('signalk:client');
 var rp = require('request-promise');
+var Promise = require('bluebird');
 
 function Client(host, port) {
   this.host = host;
@@ -50,9 +51,9 @@ function discoverAndConnect(options) {
 }
 
 
-function connectDelta(hostname, callback, onConnect, onDisconnect, onError) {
+Client.prototype.connectDelta = function(hostname, callback, onConnect, onDisconnect, onError) {
   debug("Connecting to " + hostname);
-  var url = "ws://" + hostname + "/signalk/stream/v1?stream=delta&context=self";
+  var url = "ws://" + hostname + "/signalk/v1/stream?stream=delta&context=self";
   if (typeof Primus != 'undefined') {
     debug("Using Primus");
     var signalKStream = Primus.connect(url, {
@@ -95,6 +96,30 @@ function connectDelta(hostname, callback, onConnect, onDisconnect, onError) {
     }
   }
 }
+
+function getSelf(host) {
+  return rp("http://" + (host || this.host + ":" + this.port) + "/signalk/v1/api/vessels/self");
+}
+
+Client.prototype.getSelfMatcher = function(host) {
+  return getSelf(host || this.host + ":" + this.port).then(function(responseJson) {
+    var selfData = JSON.parse(responseJson);
+    var selfId = selfData.mmsi || selfData.uuid;
+    if (selfId) {
+      var selfContext = 'vessels.' + selfId;
+      return function(delta) {
+        return delta.context === 'self' || delta.context === 'vessels.self' || delta.context === selfContext;
+      }
+    } else {
+      return function(delta) {
+        return true;
+      }
+    }
+  });
+}  
+
+
+
 
 
 module.exports = {
