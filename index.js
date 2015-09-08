@@ -1,7 +1,9 @@
 var WebSocket = require('ws');
 var debug = require('debug')('signalk:client');
-var rp = require('request-promise');
+
 var Promise = require('bluebird');
+var agent = require('superagent-promise')(require('superagent'), Promise);
+
 
 function Client(host, port) {
   this.host = host;
@@ -9,8 +11,8 @@ function Client(host, port) {
 }
 
 Client.prototype.get = function(path) {
-  return rp('http://' + this.host + ':' + this.port + path).then(function(responseString) {
-    return JSON.parse(responseString);
+  return agent('GET', 'http://' + this.host + ':' + this.port + path).then(function(result) {
+    return result.res.body;
   });
 }
 
@@ -98,12 +100,12 @@ Client.prototype.connectDelta = function(hostname, callback, onConnect, onDiscon
 }
 
 function getSelf(host) {
-  return rp("http://" + (host || this.host + ":" + this.port) + "/signalk/v1/api/vessels/self");
+  return agent('GET', "http://" + (host || this.host + ":" + this.port) + "/signalk/v1/api/vessels/self");
 }
 
 Client.prototype.getSelfMatcher = function(host) {
-  return getSelf(host || this.host + ":" + this.port).then(function(responseJson) {
-    var selfData = JSON.parse(responseJson);
+  return getSelf(host || this.host + ":" + this.port).then(function(result) {
+    var selfData = result.body;
     var selfId = selfData.mmsi || selfData.uuid;
     if (selfId) {
       var selfContext = 'vessels.' + selfId;
