@@ -77,9 +77,12 @@ Client.prototype.connectDelta = function(hostname, callback, onConnect, onDiscon
     var connection = new WebSocket(url);
     connection.onopen = function(msg) {
       debug("open");
-      var sub = '{"context":"vessels.self","subscribe":[{"path":"*"}]}';
-      connection.send(sub);
-      if (onConnect) onConnect();
+      if (onConnect) {
+        onConnect(connection)
+      } else {
+        var sub = '{"context":"vessels.self","subscribe":[{"path":"*"}]}';
+        connection.send(sub);
+      }
     };
     connection.onerror = function(error) {
       debug("error:" + error);
