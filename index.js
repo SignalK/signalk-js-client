@@ -102,12 +102,12 @@ Client.prototype.connectDelta = function(hostname, callback, onConnect, onDiscon
   }
 }
 
-function getSelf(host) {
+Client.prototype.getSelf = function (host) {
   return agent('GET', "http://" + (host || this.host + ":" + this.port) + "/signalk/v1/api/vessels/self");
 }
 
 Client.prototype.getSelfMatcher = function(host) {
-  return getSelf(host || this.host + ":" + this.port).then(function(result) {
+  return this.getSelf(host || this.host + ":" + this.port).then(function(result) {
     var selfData = result.body;
     var selfId = selfData.mmsi || selfData.uuid;
     if (selfId) {
