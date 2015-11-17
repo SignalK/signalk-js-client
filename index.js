@@ -1,3 +1,4 @@
+var EventEmitter = require('eventemitter3');
 var WebSocket = require('ws');
 var debug = require('debug')('signalk:client');
 
@@ -9,6 +10,10 @@ function Client(host, port) {
   this.host = host;
   this.port = port;
 }
+
+
+require('util').inherits(Client, EventEmitter);
+
 
 Client.prototype.get = function(path) {
   return agent('GET', 'http://' + this.host + ':' + this.port + path).then(function(result) {
@@ -27,11 +32,12 @@ Client.prototype.connect = function(options) {
   if (host && port) {
     return this.connectDelta(options.host + ":" + options.port, options.onData, options.onConnect, options.onDisconnect, options.onError)
   }
-  return discoverAndConnect(options);
+  return this.discoverAndConnect(options);
 }
 
-function discoverAndConnect(options) {
+Client.prototype.discoverAndConnect = function(options) {
   debug('discoverAndConnect');
+  var that = this;
   try {
     var mdns = require('mdns');
   } catch(ex) {
@@ -48,7 +54,11 @@ function discoverAndConnect(options) {
     debug("Starting mdns discovery");
     browser.start();
   }).then(function(service) {
-    return connectDelta(service.host + ":" + service.port, options.onData, options.onConnect, options.onDisconnect, options.onError);
+    that.host = service.host;
+    that.port = service.port;
+    debug("Discovered " + that.host + ":" + that.port)
+    that.emit('discovery', service);
+    return that.connectDelta(service.host + ":" + service.port, options.onData, options.onConnect, options.onDisconnect, options.onError);
   });
 }
 
