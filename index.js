@@ -16,7 +16,7 @@ require('util').inherits(Client, EventEmitter);
 
 
 Client.prototype.get = function(path) {
-  return agent('GET', 'http://' + this.host + ':' + this.port + path).then(function(result) {
+  return agent('GET', 'http://' + this.host + ':' + this.port + '/signalk/v1/api' + path).then(function(result) {
     return result.res.body;
   });
 }
