@@ -131,12 +131,31 @@ Client.prototype.getSelfMatcher = function(host) {
       }
     }
   });
-}  
+}
 
+function convertUpdateToHumanUnits(update) {
+  if (update.values) {
+    update.values.forEach(convertPathValueToHumanUnits)
+  }
+}
 
+function convertPathValueToHumanUnits(pathValue) {
+  if (signalkSchema.metadata[pathValue.path] && conversions[signalkSchema.metadata[pathValue.path].units]) {
+    pathValue.value = conversions[signalkSchema.metadata[pathValue.path].units].convert(pathValue.value);
+    pathValue.units = conversions[signalkSchema.metadata[pathValue.path].units].to;
+  }
+}
 
+function isDelta(msg) {
+  return typeof msg.context != "undefined"
+}
 
+function isHello(msg) {
+  return typeof msg.version != "undefined"
+}
 
 module.exports = {
-  Client: Client
+  Client: Client,
+  isDelta: isDelta,
+  isHello: isHello
 }
