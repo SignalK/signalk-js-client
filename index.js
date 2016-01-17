@@ -92,7 +92,7 @@ Client.prototype.connectDelta = function(hostname, callback, onConnect, onDiscon
     if (onConnect) {
       signalKStream.on('connect', onConnect(skConnection));
     } else {
-      signalKStream.on('connect', function() { signalKStream.write(sub); };
+      signalKStream.on('connect', function() { signalKStream.write(sub); });
     }
   } else {
     debug("Using ws");
