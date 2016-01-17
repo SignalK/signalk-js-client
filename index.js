@@ -64,8 +64,16 @@ Client.prototype.discoverAndConnect = function(options) {
 
 
 Client.prototype.connectDelta = function(hostname, callback, onConnect, onDisconnect, onError) {
+  var sub = {
+    "context": "vessels.self",
+    "subscribe": [{
+      "path": "*"
+    }]
+  };
   debug("Connecting to " + hostname);
   var url = "ws://" + hostname + "/signalk/v1/stream?stream=delta&context=self";
+  var skConnection = {};
+
   if (typeof Primus != 'undefined') {
     debug("Using Primus");
     var signalKStream = Primus.connect(url, {
@@ -76,22 +84,32 @@ Client.prototype.connectDelta = function(hostname, callback, onConnect, onDiscon
       }
     });
     signalKStream.on('data', callback);
-    return {
-      disconnect: function() {
-        signalKStream.destroy();
-        debug('Disconnected');
-      }
+    skConnection.send = signalKStream.write;
+    skConnection.disconnect = function() {
+      signalKStream.destroy();
+      debug('Disconnected');
+    };
+    if (onConnect) {
+      signalKStream.on('connect', onConnect(skConnection));
+    } else {
+      signalKStream.on('connect', function() { signalKStream.write(sub); };
     }
   } else {
     debug("Using ws");
     var connection = new WebSocket(url);
+    skConnection.send = function(data) {
+      connection.send(JSON.stringify(data));
+    };
+    skConnection.disconnect = function() {
+      connection.close();
+      debug('Disconnected');
+    };
     connection.onopen = function(msg) {
       debug("open");
       if (onConnect) {
-        onConnect(connection)
+        onConnect(skConnection)
       } else {
-        var sub = '{"context":"vessels.self","subscribe":[{"path":"*"}]}';
-        connection.send(sub);
+        skConnection.send(sub);
       }
     };
     connection.onerror = function(error) {
@@ -103,13 +121,11 @@ Client.prototype.connectDelta = function(hostname, callback, onConnect, onDiscon
     connection.onmessage = function(msg) {
       callback(JSON.parse(msg.data));
     };
-    return {
-      disconnect: function() {
-        connection.close();
-        debug('Disconnected');
-      }
-    }
   }
+  skConnection.subscribeAll = function() {
+    skConnection.send(sub);
+  }
+  return skConnection;
 }
 
 Client.prototype.getSelf = function (host) {
