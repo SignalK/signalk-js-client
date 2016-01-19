@@ -76,23 +76,23 @@ Client.prototype.connectDelta = function(hostname, callback, onConnect, onDiscon
 
   if (typeof Primus != 'undefined') {
     debug("Using Primus");
-    var signalKStream = Primus.connect(url, {
+    var primus = Primus.connect(url, {
       reconnect: {
         maxDelay: 15000,
         minDelay: 500,
         retries: Infinity
       }
     });
-    signalKStream.on('data', callback);
-    skConnection.send = signalKStream.write;
+    primus.on('data', callback);
+    skConnection.send = primus.write.bind(primus);
     skConnection.disconnect = function() {
       signalKStream.destroy();
       debug('Disconnected');
     };
     if (onConnect) {
-      signalKStream.on('connect', onConnect(skConnection));
+      primus.on('open', onConnect.bind(this, skConnection));
     } else {
-      signalKStream.on('connect', function() { signalKStream.write(sub); });
+      primus.on('open', function() { skConnection.send(sub); });
     }
   } else {
     debug("Using ws");
