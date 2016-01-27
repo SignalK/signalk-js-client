@@ -1,3 +1,4 @@
+var _object = require('lodash/object');
 var EventEmitter = require('eventemitter3');
 var WebSocket = require('ws');
 var debug = require('debug')('signalk:client');
@@ -45,34 +46,46 @@ Client.prototype.discoverAndConnect = function(options) {
     return
   }
   return new Promise(function(resolve, reject) {
-    var browser = mdns.createBrowser(mdns.tcp('signalk-ws'));
+    var browser = mdns.createBrowser(mdns.tcp('signalk-http'));
     browser.on('serviceUp', function(service) {
-      debug("Discovered signalk-ws with txtRecord:" + JSON.stringify(service.txtRecord, null, 2));
+      debug("Discovered signalk-http:" + JSON.stringify(service.type, null, 2) + "\n" + JSON.stringify(service.txtRecord, null, 2));
       //TODO handle multiple discoveries
-      resolve(service);
-    });
+      that.host = service.host;
+      that.port = service.port;
+      debug("GETting /signalk")
+      that.get('/signalk')
+      .then(function(response) {
+        debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
+        that.endpoints = response.body.endpoints;
+        resolve(response.body.endpoints);
+      })
+     });
     debug("Starting mdns discovery");
     browser.start();
-  }).then(function(service) {
-    that.host = service.host;
-    that.port = service.port;
-    debug("Discovered " + that.host + ":" + that.port)
-    that.emit('discovery', service);
-    return that.connectDelta(service.host + ":" + service.port, options.onData, options.onConnect, options.onDisconnect, options.onError);
+  }).then(function(endpoints) {
+    that.endpoints = endpoints;
+    that.emit('discovery', endpoints);
+    debug("Connecting to " + JSON.stringify(_object.values(endpoints)[0]['signalk-ws'], null, 2));
+    return that.connectDeltaByUrl(_object.values(endpoints)[0]['signalk-ws'], options.onData, options.onConnect, options.onDisconnect, options.onError);
   });
 }
 
 
 Client.prototype.connectDelta = function(hostname, callback, onConnect, onDisconnect, onError) {
+  return this.connectDeltaByUrl("ws://" + hostname + "/signalk/v1/stream?stream=delta&context=self", callback, onConnect, onDisconnect, onError);
+}
+
+Client.prototype.connectDeltaByUrl = function(url, callback, onConnect, onDisconnect, onError) {
   var sub = {
     "context": "vessels.self",
     "subscribe": [{
       "path": "*"
     }]
   };
-  debug("Connecting to " + hostname);
-  var url = "ws://" + hostname + "/signalk/v1/stream?stream=delta&context=self";
-  var skConnection = {};
+  debug("Connecting ws to " + url);
+  var skConnection = {
+    host: this.host
+  };
 
   if (typeof Primus != 'undefined') {
     debug("Using Primus");
@@ -126,6 +139,10 @@ Client.prototype.connectDelta = function(hostname, callback, onConnect, onDiscon
     skConnection.send(sub);
   }
   return skConnection;
+}
+
+Client.prototype.get = function (path) {
+  return agent('GET', "http://" + (this.host + ":" + this.port) + path);
 }
 
 Client.prototype.getSelf = function (host) {
