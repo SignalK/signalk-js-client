@@ -111,7 +111,7 @@ Client.prototype.connectDeltaByUrl = function(url, callback, onConnect, onDiscon
     debug("Using ws");
     var connection = new WebSocket(url);
     skConnection.send = function(data) {
-      connection.send(JSON.stringify(data));
+      connection.send(data);
     };
     skConnection.disconnect = function() {
       connection.close();
