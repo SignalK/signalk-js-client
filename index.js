@@ -2,6 +2,7 @@ var _object = require('lodash/object');
 var EventEmitter = require('eventemitter3');
 var WebSocket = require('ws');
 var debug = require('debug')('signalk:client');
+var url = require('url');
 
 var Promise = require('bluebird');
 var agent = require('superagent-promise')(require('superagent'), Promise);
@@ -75,21 +76,24 @@ Client.prototype.connectDelta = function(hostname, callback, onConnect, onDiscon
   return this.connectDeltaByUrl("ws://" + hostname + "/signalk/v1/stream?stream=delta&context=self", callback, onConnect, onDisconnect, onError);
 }
 
-Client.prototype.connectDeltaByUrl = function(url, callback, onConnect, onDisconnect, onError) {
+Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisconnect, onError) {
+  var theUrl = url.parse(wsUrl);
+  this.host = theUrl.hostname;
+  this.port = theUrl.port;
   var sub = {
     "context": "vessels.self",
     "subscribe": [{
       "path": "*"
     }]
   };
-  debug("Connecting ws to " + url);
+  debug("Connecting ws to " + wsUrl);
   var skConnection = {
     host: this.host
   };
 
   if (typeof Primus != 'undefined') {
     debug("Using Primus");
-    var primus = Primus.connect(url, {
+    var primus = Primus.connect(wsUrl, {
       reconnect: {
         maxDelay: 15000,
         minDelay: 500,
@@ -109,7 +113,7 @@ Client.prototype.connectDeltaByUrl = function(url, callback, onConnect, onDiscon
     }
   } else {
     debug("Using ws");
-    var connection = new WebSocket(url);
+    var connection = new WebSocket(wsUrl);
     skConnection.send = function(data) {
       connection.send(data);
     };
