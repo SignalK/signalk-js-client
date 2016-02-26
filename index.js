@@ -18,7 +18,7 @@ require('util').inherits(Client, EventEmitter);
 
 Client.prototype.get = function(path) {
   return agent('GET', 'http://' + this.host + ':' + this.port + '/signalk/v1/api' + path).then(function(result) {
-    return result.res.body;
+    return result.body;
   });
 }
 
@@ -141,9 +141,6 @@ Client.prototype.connectDeltaByUrl = function(url, callback, onConnect, onDiscon
   return skConnection;
 }
 
-Client.prototype.get = function (path) {
-  return agent('GET', "http://" + (this.host + ":" + this.port) + path);
-}
 
 Client.prototype.getSelf = function (host) {
   return agent('GET', "http://" + (host || this.host + ":" + this.port) + "/signalk/v1/api/vessels/self");
