@@ -167,6 +167,10 @@ Client.prototype.getSelfMatcher = function(host) {
   });
 }
 
+Client.prototype.getMeta = function(prefix, path) {
+  return this.get(prefix + "/" + path.split('.').join('/') + '/meta');
+}
+
 function convertUpdateToHumanUnits(update) {
   if (update.values) {
     update.values.forEach(convertPathValueToHumanUnits)
