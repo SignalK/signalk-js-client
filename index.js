@@ -149,7 +149,7 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
     debug("Using ws");
     var connection = new WebSocket(wsUrl);
     skConnection.send = function(data) {
-      connection.send(data);
+      connection.send(typeof data != 'string' ? JSON.stringify(data) : data);
     };
     skConnection.disconnect = function() {
       connection.close();
