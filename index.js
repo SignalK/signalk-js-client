@@ -87,12 +87,12 @@ Client.prototype.discoverAndConnect = function(options) {
       that.port = service.port;
       debug("GETting /signalk")
       that.get('/signalk')
-      .then(function(response) {
-        debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
-        that.endpoints = response.body.endpoints;
-        resolve(response.body.endpoints);
-      })
-     });
+        .then(function(response) {
+          debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
+          that.endpoints = response.body.endpoints;
+          resolve(response.body.endpoints);
+        })
+    });
     debug("Starting mdns discovery");
     browser.start();
   }).then(function(endpoints) {
@@ -141,7 +141,9 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
     if (onConnect) {
       primus.on('open', onConnect.bind(this, skConnection));
     } else {
-      primus.on('open', function() { skConnection.send(sub); });
+      primus.on('open', function() {
+        skConnection.send(sub);
+      });
     }
   } else {
     debug("Using ws");
@@ -178,7 +180,7 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
 }
 
 
-Client.prototype.getSelf = function (host) {
+Client.prototype.getSelf = function(host) {
   return agent('GET', "http://" + (host || this.host + ":" + this.port) + "/signalk/v1/api/vessels/self");
 }
 
