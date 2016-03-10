@@ -20,8 +20,8 @@ Client.prototype.apiGet = function(path) {
   return this.get('/signalk/v1/api' + path);
 }
 
-Client.prototype.get = function(path) {
-  return agent('GET', 'http://' + this.host + ':' + this.port  + path);
+Client.prototype.get = function(path, host, port) {
+  return agent('GET', 'http://' + (this.host || host)+ ':' + (this.port || port) + path);
 }
 
 Client.prototype.connect = function(options) {
@@ -38,12 +38,42 @@ Client.prototype.connect = function(options) {
   return this.discoverAndConnect(options);
 }
 
+Client.prototype.startDiscovery = function() {
+  debug('startDiscovery');
+  var that = this;
+  try {
+    var mdns = require('mdns');
+  } catch (ex) {
+    console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify host and port");
+    return
+  }
+  that.browser = mdns.createBrowser(mdns.tcp('signalk-http'));
+  that.browser.on('serviceUp', function(service) {
+    debug("Discovered signalk-http:" + JSON.stringify(service.type, null, 2) + "\n" + JSON.stringify(service.txtRecord, null, 2));
+    debug("GETting /signalk")
+    that.get('/signalk', service.host, service.port)
+      .then(function(response) {
+        debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
+        that.emit('endpoints', response.body.endpoints);
+      })
+  });
+  debug("Starting mdns discovery");
+  that.browser.start();
+}
+
+Client.prototype.stopDiscovery = function() {
+  if (this.browser) {
+    debug('Stopping discovery');
+    this.browser.stop();
+  }
+}
+
 Client.prototype.discoverAndConnect = function(options) {
   debug('discoverAndConnect');
   var that = this;
   try {
     var mdns = require('mdns');
-  } catch(ex) {
+  } catch (ex) {
     console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify host and port");
     return
   }
