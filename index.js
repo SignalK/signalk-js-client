@@ -51,7 +51,8 @@ Client.prototype.discoverAndConnect = function(options) {
     var browser = mdns.createBrowser(mdns.tcp('signalk-http'));
     browser.on('serviceUp', function(service) {
       debug("Discovered signalk-http:" + JSON.stringify(service.type, null, 2) + "\n" + JSON.stringify(service.txtRecord, null, 2));
-      //TODO handle multiple discoveries
+      debug("Stopping discovery");
+      browser.stop();
       that.host = service.host;
       that.port = service.port;
       debug("GETting /signalk")
