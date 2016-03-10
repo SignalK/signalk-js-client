@@ -16,11 +16,12 @@ function Client(host, port) {
 
 require('util').inherits(Client, EventEmitter);
 
+Client.prototype.apiGet = function(path) {
+  return this.get('/signalk/v1/api' + path);
+}
 
 Client.prototype.get = function(path) {
-  return agent('GET', 'http://' + this.host + ':' + this.port + '/signalk/v1/api' + path).then(function(result) {
-    return result.body;
-  });
+  return agent('GET', 'http://' + this.host + ':' + this.port  + path);
 }
 
 Client.prototype.connect = function(options) {
