@@ -21,7 +21,7 @@ Client.prototype.apiGet = function(path) {
 }
 
 Client.prototype.get = function(path, host, port) {
-  return agent('GET', 'http://' + (this.host || host)+ ':' + (this.port || port) + path);
+  return agent('GET', 'http://' + (this.host || host) + ':' + (this.port || port) + path);
 }
 
 Client.prototype.connect = function(options) {
@@ -54,7 +54,11 @@ Client.prototype.startDiscovery = function() {
     that.get('/signalk', service.host, service.port)
       .then(function(response) {
         debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
-        that.emit('endpoints', response.body.endpoints);
+        that.emit('discovery', {
+          host: service.host,
+          port: service.port,
+          discoveryResponse: response.body
+        });
       })
   });
   debug("Starting mdns discovery");
