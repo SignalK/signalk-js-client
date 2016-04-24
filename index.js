@@ -8,6 +8,14 @@ var Promise = require('bluebird');
 var agent = require('superagent-promise')(require('superagent'), Promise);
 
 
+//Workaround for Avahi oddity on RPi
+//https://github.com/agnat/node_mdns/issues/130
+var sequence = [
+  mdns.rst.DNSServiceResolve(),
+  'DNSServiceGetAddrInfo' in mdns.dns_sd ? mdns.rst.DNSServiceGetAddrInfo() : mdns.rst.getaddrinfo({families:[4]}),
+  mdns.rst.makeAddressesUnique()
+];
+
 function Client(host, port) {
   this.host = host;
   this.port = port;
@@ -47,7 +55,7 @@ Client.prototype.startDiscovery = function() {
     console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify host and port");
     return
   }
-  that.browser = mdns.createBrowser(mdns.tcp('signalk-http'));
+  that.browser = mdns.createBrowser(mdns.tcp('signalk-http'), {resolverSequence: sequence});
   that.browser.on('serviceUp', function(service) {
     debug("Discovered signalk-http:" + JSON.stringify(service.type, null, 2) + "\n" + JSON.stringify(service.txtRecord, null, 2));
     debug("GETting /signalk")
@@ -82,7 +90,7 @@ Client.prototype.discoverAndConnect = function(options) {
     return
   }
   return new Promise(function(resolve, reject) {
-    var browser = mdns.createBrowser(mdns.tcp('signalk-http'));
+    var browser = mdns.createBrowser(mdns.tcp('signalk-http'), {resolverSequence: sequence});
     browser.on('serviceUp', function(service) {
       debug("Discovered signalk-http:" + JSON.stringify(service.type, null, 2) + "\n" + JSON.stringify(service.txtRecord, null, 2));
       debug("Stopping discovery");
