@@ -123,8 +123,9 @@ Client.prototype.discoverAndConnect = function(options) {
 }
 
 
-Client.prototype.connectDelta = function(hostname, callback, onConnect, onDisconnect, onError) {
-  return this.connectDeltaByUrl("ws://" + hostname + "/signalk/v1/stream?stream=delta&context=self", callback, onConnect, onDisconnect, onError);
+Client.prototype.connectDelta = function(hostname, callback, onConnect, onDisconnect, onError, subscribe) {
+  var url = "ws://" + hostname + "/signalk/v1/stream" + (subscribe ? '?subscribe=' + subscribe : '');
+  return this.connectDeltaByUrl(url, callback, onConnect, onDisconnect, onError);
 }
 
 Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisconnect, onError) {
