@@ -155,7 +155,7 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
     primus.on('data', callback);
     skConnection.send = primus.write.bind(primus);
     skConnection.disconnect = function() {
-      signalKStream.destroy();
+      primus.end();
       debug('Disconnected');
     };
     if (onConnect) {
