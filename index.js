@@ -1,11 +1,10 @@
-var _object = require('lodash/object');
-var EventEmitter = require('eventemitter3');
-var WebSocket = require('ws');
-var debug = require('debug')('signalk:client');
-var url = require('url');
-
-var Promise = require('bluebird');
-var agent = require('superagent-promise')(require('superagent'), Promise);
+var _object = require('lodash/object'),
+    EventEmitter = require('eventemitter3'),
+    WebSocket = require('ws'),
+    debug = require('debug')('signalk:client'),
+    url = require('url'),
+    Promise = require('bluebird'),
+    agent = require('superagent-promise')(require('superagent'), Promise);
 
 //Workaround for Avahi oddity on RPi
 //https://github.com/agnat/node_mdns/issues/130
@@ -24,29 +23,68 @@ function Client(host, port) {
   this.port = port;
 }
 
-
 require('util').inherits(Client, EventEmitter);
+
+/**
+ * @module signalk-client
+ */
+
+/**
+ * @name Signal K Client Library
+ *
+ * This library makes it a little easier to interface with Signal K servers via the REST API and WebSockets. To use it,
+ * create a new Client object. The contstructor takes three optional parameters: hostname, port, and a flag indicating
+ * whether or not to use SSL. If no parameters are passed, connect() will attempt to discover a Signal K server on the
+ * network via mDNS. Naturally, this doesn't work in the browser.
+ *
+ * It inherits from EventEmitter, so EventEmitter conventions apply.
+ *
+ * @example
+ * var client = new Client('localhost');
+ * client.connect();
+ *
+ * @param {string} hostname
+ * @param {number} port
+ * @param {boolean} useSSL
+ */
+function Client(hostname, port, useSSL) {
+  if(useSSL) {
+    this.protocol = 'https';
+  } else {
+    this.protocol = 'http';
+  }
+  this.hostname = hostname;
+  this.port = port;
+}
+
+/**
+ */
+Client.prototype.connect = function(options) {
+  debug('connect');
+
+  var hostname = this.hostname;
+  var port = this.port;
+
+  if (options) {
+    hostname = options.hostname || hostname;
+    port = options.port || port;
+  }
+
+  if (hostname && port) {
+    return this.connectDelta(options.hostname + ":" + options.port, options.onData,
+        options.onConnect, options.onDisconnect, options.onError);
+  }
+
+  return this.discoverAndConnect(options);
+}
 
 Client.prototype.apiGet = function(path) {
   return this.get('/signalk/v1/api' + path);
 }
 
-Client.prototype.get = function(path, host, port) {
-  return agent('GET', 'http://' + (this.host || host) + ':' + (this.port || port) + path);
-}
-
-Client.prototype.connect = function(options) {
-  debug('connect');
-  var host = this.host;
-  var port = this.port;
-  if (options) {
-    host = options.host || host;
-    port = options.port || port;
-  }
-  if (host && port) {
-    return this.connectDelta(options.host + ":" + options.port, options.onData, options.onConnect, options.onDisconnect, options.onError)
-  }
-  return this.discoverAndConnect(options);
+Client.prototype.get = function(path, hostname, port) {
+  return agent('GET', 'http://' + (this.hostname || hostname) + ':' +
+      (this.port || port) + path);
 }
 
 Client.prototype.startDiscovery = function() {
@@ -55,8 +93,8 @@ Client.prototype.startDiscovery = function() {
   try {
     var mdns = require('mdns');
   } catch (ex) {
-    console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify host and port");
-    return
+    console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify hostname and port");
+    return;
   }
   that.browser = mdns.createBrowser(mdns.tcp('signalk-http'), {
     resolverSequence: getSequence(mdns)
@@ -64,11 +102,11 @@ Client.prototype.startDiscovery = function() {
   that.browser.on('serviceUp', function(service) {
     debug("Discovered signalk-http:" + JSON.stringify(service.type, null, 2) + "\n" + JSON.stringify(service.txtRecord, null, 2));
     debug("GETting /signalk")
-    that.get('/signalk', service.host, service.port)
+    that.get('/signalk', service.hostname, service.port)
       .then(function(response) {
         debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
         that.emit('discovery', {
-          host: service.host,
+          hostname: service.hostname,
           port: service.port,
           discoveryResponse: response.body
         });
@@ -88,12 +126,14 @@ Client.prototype.stopDiscovery = function() {
 Client.prototype.discoverAndConnect = function(options) {
   debug('discoverAndConnect');
   var that = this;
+
   try {
     var mdns = require('mdns');
   } catch (ex) {
-    console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify host and port");
-    return
+    console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify hostname and port");
+    return;
   }
+
   return new Promise(function(resolve, reject) {
     var browser = mdns.createBrowser(mdns.tcp('signalk-http'), {
       resolverSequence: getSequence(mdns)
@@ -102,7 +142,7 @@ Client.prototype.discoverAndConnect = function(options) {
       debug("Discovered signalk-http:" + JSON.stringify(service.type, null, 2) + "\n" + JSON.stringify(service.txtRecord, null, 2));
       debug("Stopping discovery");
       browser.stop();
-      that.host = service.host;
+      that.hostname = service.hostname;
       that.port = service.port;
       debug("GETting /signalk")
       that.get('/signalk')
@@ -110,7 +150,7 @@ Client.prototype.discoverAndConnect = function(options) {
           debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
           that.endpoints = response.body.endpoints;
           resolve(response.body.endpoints);
-        })
+        });
     });
     debug("Starting mdns discovery");
     browser.start();
@@ -122,7 +162,6 @@ Client.prototype.discoverAndConnect = function(options) {
   });
 }
 
-
 Client.prototype.connectDelta = function(hostname, callback, onConnect, onDisconnect, onError, subscribe) {
   var url = "ws://" + hostname + "/signalk/v1/stream" + (subscribe ? '?subscribe=' + subscribe : '');
   return this.connectDeltaByUrl(url, callback, onConnect, onDisconnect, onError);
@@ -130,7 +169,7 @@ Client.prototype.connectDelta = function(hostname, callback, onConnect, onDiscon
 
 Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisconnect, onError) {
   var theUrl = url.parse(wsUrl);
-  this.host = theUrl.hostname;
+  this.hostname = theUrl.hostname;
   this.port = theUrl.port;
   var sub = {
     "context": "vessels.self",
@@ -140,7 +179,7 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
   };
   debug("Connecting ws to " + wsUrl);
   var skConnection = {
-    host: this.host
+    hostname: this.hostname
   };
 
   if (typeof Primus != 'undefined') {
@@ -199,20 +238,43 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
   return skConnection;
 }
 
+/**
+ * getSelf
+ *
+ * Returns the current contents of the Signal K tree for your vessel (or at
+ * least the contents of the Signal K tree pointed to by `self`.
+ *
+ * @returns {Promise}
+ */
+Client.prototype.getSelf = function() {
+  var skUrl = {
+    protocol: this.protocol,
+    hostname: this.hostname,
+    port: this.port,
+    pathname: '/signalk/v1/api/vessels/self'
+  };
 
-Client.prototype.getSelf = function(host) {
-  return agent('GET', "http://" + (host || this.host + ":" + this.port) + "/signalk/v1/api/vessels/self");
+  return agent('GET', url.format(skUrl));
 }
 
-Client.prototype.getSelfMatcher = function(host) {
-  return this.getSelf(host || this.host + ":" + this.port).then(function(result) {
+/**
+ *
+ * getSelfMatcher
+ *
+ * @returns {function} that can be passed to a filter function to select delta
+ * messages just for your vessel.
+ */
+Client.prototype.getSelfMatcher = function() {
+  return this.getSelf().then(function(result) {
     var selfData = result.body;
     var selfId = selfData.mmsi || selfData.uuid;
+
     if (selfId) {
       var selfContext = 'vessels.' + selfId;
       return function(delta) {
-        return delta.context === 'self' || delta.context === 'vessels.self' || delta.context === selfContext;
-      }
+        return (delta.context === 'self' || delta.context === 'vessels.self' ||
+          delta.context === selfContext);
+      };
     } else {
       return function(delta) {
         return true;
