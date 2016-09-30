@@ -4,7 +4,8 @@
   "description": "Signal K JavaScript client",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "doc": "jsdoc -r lib"
   },
   "keywords": [
     "Signal K",
@@ -26,5 +27,9 @@
     "superagent-promise": "^1.0.3",
     "url": "^0.11.0",
     "ws": "^0.8"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "jsdoc": "^3.4.0"
   }
 }
