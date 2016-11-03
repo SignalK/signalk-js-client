@@ -72,7 +72,7 @@ Client.prototype.connect = function(options) {
 
   if (hostname && port) {
     return this.connectDelta(options.hostname + ":" + options.port, options.onData,
-        options.onConnect, options.onDisconnect, options.onError);
+                             options.onConnect, options.onDisconnect, options.onError, options.onClose);
   }
 
   return this.discoverAndConnect(options);
@@ -158,16 +158,16 @@ Client.prototype.discoverAndConnect = function(options) {
     that.endpoints = endpoints;
     that.emit('discovery', endpoints);
     debug("Connecting to " + JSON.stringify(_object.values(endpoints)[0]['signalk-ws'], null, 2));
-    return that.connectDeltaByUrl(_object.values(endpoints)[0]['signalk-ws'], options.onData, options.onConnect, options.onDisconnect, options.onError);
+    return that.connectDeltaByUrl(_object.values(endpoints)[0]['signalk-ws'], options.onData, options.onConnect, options.onDisconnect, options.onError, options.onClose);
   });
 }
 
-Client.prototype.connectDelta = function(hostname, callback, onConnect, onDisconnect, onError, subscribe) {
+Client.prototype.connectDelta = function(hostname, callback, onConnect, onDisconnect, onError, onClose, subscribe) {
   var url = "ws://" + hostname + "/signalk/v1/stream" + (subscribe ? '?subscribe=' + subscribe : '');
-  return this.connectDeltaByUrl(url, callback, onConnect, onDisconnect, onError);
+  return this.connectDeltaByUrl(url, callback, onConnect, onDisconnect, onError, onClose);
 }
 
-Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisconnect, onError) {
+Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisconnect, onError, onClose) {
   var theUrl = url.parse(wsUrl);
   this.hostname = theUrl.hostname;
   this.port = theUrl.port;
@@ -230,6 +230,12 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
     };
     connection.onmessage = function(msg) {
       callback(JSON.parse(msg.data));
+    };
+    connection.onclose = function(event) {
+      debug("close:" + event);
+      if (onClose) {
+        onClose(event)
+      }
     };
   }
   skConnection.subscribeAll = function() {
