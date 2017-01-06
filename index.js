@@ -71,8 +71,15 @@ Client.prototype.connect = function(options) {
   }
 
   if (hostname && port) {
-    return this.connectDelta(options.hostname + ":" + options.port, options.onData,
-                             options.onConnect, options.onDisconnect, options.onError, options.onClose);
+    return this.connectDelta(
+      options.hostname + ":" + options.port,
+      options.onData,
+      options.onConnect,
+      options.onDisconnect,
+      options.onError,
+      options.onClose,
+      options.subscribe
+    );
   }
 
   return this.discoverAndConnect(options);
