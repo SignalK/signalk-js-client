@@ -1,10 +1,24 @@
 var _object = require('lodash/object'),
-    EventEmitter = require('eventemitter3'),
-    WebSocket = require('ws'),
-    debug = require('debug')('signalk:client'),
-    url = require('url'),
-    Promise = require('bluebird'),
-    agent = require('superagent-promise')(require('superagent'), Promise);
+  EventEmitter = require('eventemitter3'),
+  debug = require('debug')('signalk:client'),
+  url = require('url'),
+  Promise = require('bluebird'),
+  agent = require('superagent-promise')(require('superagent'), Promise);
+
+
+var BrowserWebSocket = global.WebSocket || global.MozWebSocket;
+var NodeWebSocket;
+if(typeof window === 'undefined') {
+  try {
+    NodeWebSocket = require('ws');
+  } catch(e) {}
+}
+
+var WebSocket = BrowserWebSocket;
+if(!WebSocket && typeof window === 'undefined') {
+  WebSocket = NodeWebSocket;
+}
+
 
 //Workaround for Avahi oddity on RPi
 //https://github.com/agnat/node_mdns/issues/130
@@ -70,11 +84,17 @@ Client.prototype.connect = function(options) {
     port = options.port || port;
   }
 
-  if (hostname && port) {
-    return this.connectDelta(options.hostname + ":" + options.port, options.onData,
-                             options.onConnect, options.onDisconnect, options.onError, options.onClose);
+  if(hostname && port) {
+    return this.connectDelta(
+      options.hostname + ":" + options.port,
+      options.onData,
+      options.onConnect,
+      options.onDisconnect,
+      options.onError,
+      options.onClose,
+      options.subscribe
+    );
   }
-
   return this.discoverAndConnect(options);
 }
 
