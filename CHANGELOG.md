@@ -1,6 +1,6 @@
 ## Change Log
 
-### upcoming (2017/01/08 19:20 +00:00)
+### v0.0.1-1 (2017/01/08 19:34 +00:00)
 - [#10](https://github.com/signalk/signalk-js-client/pull/10) Browser websocket (@tkurki)
 - [#11](https://github.com/signalk/signalk-js-client/pull/11) Add support for subscribe in connect (@tkurki)
 
