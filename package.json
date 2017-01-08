@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha",
+    "changelog": "github-changes -o signalk -r signalk-js-client -a --only-pulls --use-commit-body",
     "doc": "jsdoc -r lib"
   },
   "keywords": [
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "chai": "^3.5.0",
+    "github-changes": "^1.0.4",
     "jsdoc": "^3.4.0"
   }
 }
