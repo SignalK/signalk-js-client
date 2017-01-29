@@ -107,6 +107,10 @@ Client.prototype.get = function(path, hostname, port) {
       (this.port || port) + path);
 }
 
+Client.prototype.discoveryAvailable = function() {
+  return moduleAvailable('md' + 'ns')
+}
+
 Client.prototype.startDiscovery = function() {
   debug('startDiscovery');
   var that = this;
@@ -332,6 +336,14 @@ function isDelta(msg) {
 
 function isHello(msg) {
   return typeof msg.version != "undefined"
+}
+
+function moduleAvailable(name) {
+  try {
+    require.resolve(name);
+    return true;
+  } catch(e) {}
+  return false;
 }
 
 module.exports = {
