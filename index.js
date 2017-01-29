@@ -79,12 +79,12 @@ Client.prototype.connect = function(options) {
   var hostname = this.hostname;
   var port = this.port;
 
-  if (options) {
+  if(options) {
     hostname = options.hostname || hostname;
     port = options.port || port;
   }
 
-  if (hostname && port) {
+  if(hostname && port) {
     return this.connectDelta(
       options.hostname + ":" + options.port,
       options.onData,
@@ -187,7 +187,7 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
     hostname: this.hostname
   };
 
-  if (typeof Primus != 'undefined') {
+  if(typeof Primus != 'undefined') {
     debug("Using Primus");
     var primus = Primus.connect(wsUrl, {
       reconnect: {
@@ -202,7 +202,7 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
       primus.end();
       debug('Disconnected');
     };
-    if (onConnect) {
+    if(onConnect) {
       primus.on('open', onConnect.bind(this, skConnection));
     } else {
       primus.on('open', function() {
@@ -221,7 +221,7 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
     };
     connection.onopen = function(msg) {
       debug("open");
-      if (onConnect) {
+      if(onConnect) {
         onConnect(skConnection)
       } else {
         skConnection.send(sub);
@@ -229,7 +229,7 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
     };
     connection.onerror = function(error) {
       debug("error:" + error);
-      if (onError) {
+      if(onError) {
         onError(error)
       }
     };
@@ -238,7 +238,7 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
     };
     connection.onclose = function(event) {
       debug("close:" + event);
-      if (onClose) {
+      if(onClose) {
         onClose(event)
       }
     };
@@ -280,10 +280,10 @@ Client.prototype.getSelfMatcher = function() {
     var selfData = result.body;
     var selfId = selfData.mmsi || selfData.uuid;
 
-    if (selfId) {
+    if(selfId) {
       var selfContext = 'vessels.' + selfId;
       return function(delta) {
-        return (delta.context === 'self' || delta.context === 'vessels.self' ||
+        return(delta.context === 'self' || delta.context === 'vessels.self' ||
           delta.context === selfContext);
       };
     } else {
@@ -299,13 +299,13 @@ Client.prototype.getMeta = function(prefix, path) {
 }
 
 function convertUpdateToHumanUnits(update) {
-  if (update.values) {
+  if(update.values) {
     update.values.forEach(convertPathValueToHumanUnits)
   }
 }
 
 function convertPathValueToHumanUnits(pathValue) {
-  if (signalkSchema.metadata[pathValue.path] && conversions[signalkSchema.metadata[pathValue.path].units]) {
+  if(signalkSchema.metadata[pathValue.path] && conversions[signalkSchema.metadata[pathValue.path].units]) {
     pathValue.value = conversions[signalkSchema.metadata[pathValue.path].units].convert(pathValue.value);
     pathValue.units = conversions[signalkSchema.metadata[pathValue.path].units].to;
   }
