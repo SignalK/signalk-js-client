@@ -112,77 +112,58 @@ Client.prototype.discoveryAvailable = function() {
 }
 
 Client.prototype.startDiscovery = function() {
-  debug('startDiscovery');
-  var that = this;
-  try {
-    var mdns = require('mdns');
-  } catch (ex) {
-    console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify hostname and port");
-    return;
-  }
-  that.browser = mdns.createBrowser(mdns.tcp('signalk-http'), {
-    resolverSequence: getSequence(mdns)
-  });
-  that.browser.on('serviceUp', function(service) {
-    debug("Discovered signalk-http:" + JSON.stringify(service.type, null, 2) + "\n" + JSON.stringify(service.txtRecord, null, 2));
-    debug("GETting /signalk")
-    that.get('/signalk', service.hostname, service.port)
-      .then(function(response) {
-        debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
-        that.emit('discovery', {
-          hostname: service.hostname,
-          port: service.port,
-          discoveryResponse: response.body
-        });
-      })
-  });
-  debug("Starting mdns discovery");
-  that.browser.start();
+  const that = this
+  return new Promise(function(resolve, reject) {
+    if(!that.discoveryAvailable()) {
+      console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify hostname and port")
+      reject("Discovery requires mdns")
+    }
+
+    //use dynamic require & maybe fool packagers
+    const mdns = require('md' + 'ns');
+
+    that.browser = mdns.createBrowser(mdns.tcp('signalk-http'), {
+      resolverSequence: [
+      mdns.rst.DNSServiceResolve()
+    ]
+    })
+    that.browser.on('serviceUp', function(service) {
+      debug("Discovered signalk-http:" + JSON.stringify(service, null, 2))
+      debug("GETting /signalk")
+      that.get('/signalk', service.host, service.port)
+        .then(function(response) {
+          debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
+          let discovery = {
+            host: service.host,
+            port: service.port,
+            httpResponse: response.body,
+            service: service
+          }
+          that.emit('discovery', discovery)
+          resolve(discovery) // only the first time will matter
+        })
+    })
+    debug("Starting discovery")
+    that.browser.start()
+  })
 }
 
 Client.prototype.stopDiscovery = function() {
-  if (this.browser) {
-    debug('Stopping discovery');
+  debug('Stopping discovery');
+  if(this.browser) {
     this.browser.stop();
+    debug('Discovery stopping');
   }
 }
 
 Client.prototype.discoverAndConnect = function(options) {
   debug('discoverAndConnect');
-  var that = this;
-
-  try {
-    var mdns = require('mdns');
-  } catch (ex) {
-    console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify hostname and port");
-    return;
-  }
-
-  return new Promise(function(resolve, reject) {
-    var browser = mdns.createBrowser(mdns.tcp('signalk-http'), {
-      resolverSequence: getSequence(mdns)
-    });
-    browser.on('serviceUp', function(service) {
-      debug("Discovered signalk-http:" + JSON.stringify(service.type, null, 2) + "\n" + JSON.stringify(service.txtRecord, null, 2));
-      debug("Stopping discovery");
-      browser.stop();
-      that.hostname = service.hostname;
-      that.port = service.port;
-      debug("GETting /signalk")
-      that.get('/signalk')
-        .then(function(response) {
-          debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
-          that.endpoints = response.body.endpoints;
-          resolve(response.body.endpoints);
-        });
-    });
-    debug("Starting mdns discovery");
-    browser.start();
-  }).then(function(endpoints) {
-    that.endpoints = endpoints;
-    that.emit('discovery', endpoints);
-    debug("Connecting to " + JSON.stringify(_object.values(endpoints)[0]['signalk-ws'], null, 2));
-    return that.connectDeltaByUrl(_object.values(endpoints)[0]['signalk-ws'], options.onData, options.onConnect, options.onDisconnect, options.onError, options.onClose);
+  const that = this;
+  return this.startDiscovery().then(function({httpResponse}) {
+    that.endpoints = httpResponse.endpoints
+    debug("Connecting to " + JSON.stringify(_object.values(that.endpoints)[0]['signalk-ws'], null, 2))
+    that.stopDiscovery()
+    return that.connectDeltaByUrl(_object.values(that.endpoints)[0]['signalk-ws'], options.onData, options.onConnect, options.onDisconnect, options.onError, options.onClose)
   });
 }
 
