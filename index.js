@@ -32,13 +32,6 @@ function getSequence(mdns) {
   ];
 }
 
-function Client(host, port) {
-  this.host = host;
-  this.port = port;
-}
-
-require('util').inherits(Client, EventEmitter);
-
 /**
  * @module signalk-client
  */
@@ -62,6 +55,7 @@ require('util').inherits(Client, EventEmitter);
  * @param {boolean} useSSL
  */
 function Client(hostname, port, useSSL) {
+  EventEmitter.call(this)
   if(useSSL) {
     this.protocol = 'https';
   } else {
@@ -70,6 +64,8 @@ function Client(hostname, port, useSSL) {
   this.hostname = hostname;
   this.port = port;
 }
+
+require('util').inherits(Client, EventEmitter);
 
 /**
  */
