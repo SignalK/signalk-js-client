@@ -1,6 +1,6 @@
 ## Change Log
 
-### upcoming (2017/02/12 18:33 +00:00)
+### v0.0.1-2 (2017/02/12 18:39 +00:00)
 - [#12](https://github.com/SignalK/signalk-js-client/pull/12) Update dependencies to enable Greenkeeper 🌴 (@greenkeeper[bot])
 - [#14](https://github.com/SignalK/signalk-js-client/pull/14) Fix discovery and add discoveryAvailable() (@tkurki)
 
