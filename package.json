@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha",
-    "changelog": "github-changes -o signalk -r signalk-js-client -a --only-pulls --use-commit-body",
+    "changelog": "github-changes -o signalk -r signalk-js-client -a --only-pulls --use-commit-body --data=pulls",
     "doc": "jsdoc -r lib"
   },
   "keywords": [
