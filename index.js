@@ -230,7 +230,11 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
       }
     };
     connection.onmessage = function(msg) {
-      callback(JSON.parse(msg.data));
+      try {
+        callback(JSON.parse(msg.data));
+      } catch(e) {
+        console.error(e)
+      }
     };
     connection.onclose = function(event) {
       debug("close:" + event);
