@@ -1,5 +1,8 @@
 ## Change Log
 
+### v0.0.1-3 (2017/02/15 20:00 +00:00)
+- [#15](https://github.com/SignalK/signalk-js-client/pull/15) fix: improve error handling in WebSocket (@tkurki)
+
 ### v0.0.1-2 (2017/02/12 18:39 +00:00)
 - [#12](https://github.com/SignalK/signalk-js-client/pull/12) Update dependencies to enable Greenkeeper 🌴 (@greenkeeper[bot])
 - [#14](https://github.com/SignalK/signalk-js-client/pull/14) Fix discovery and add discoveryAvailable() (@tkurki)
