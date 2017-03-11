@@ -7,6 +7,8 @@
  * Represents a connection to a Signal K Server.
  * @constructor
  * @param options Options parameter.
+ * @param options.hostUrl {string} Url to the root of the server, for example https://demo.signalk.org/.
+ * Allows one to specify the protocol
  * @param options.host {string} Hostname/address of the server.
  * @param options.port {number} Port to connect to on the server.
  * @param options.subscribe {string} Subscribe parameter to the delta connection.
@@ -21,28 +23,28 @@ function Connection(params) {
   this.isConnected
 
   /**
-   * Fired upon delta message reception.
+   * Fired upon delta message reception. Event data is a delta message.
    *
-   * @event Connection#connect
+   * @event Connection#delta
    * @type {object}
    */
 
   /**
-   * Fired on delta WebSocket connection establishment.
+   * Fired on stream WebSocket connection establishment.
    *
-   * @event Connection#connect
+   * @event Connection#connected
    * @type {null}
    */
 
   /**
    * Fired after connect when receiving hello message from the server. Payload is the hello message.
    *
-   * @event Connection#connect
+   * @event Connection#hello
    * @type {object}
    */
 
   /**
-   * Fired on delta WebSocket disconnect.
+   * Fired on  WebSocket disconnect.
    *
    * @event Connection#disconnect
    * @type {null}
@@ -55,7 +57,22 @@ function Connection(params) {
    * @type {error}
    */
 
+   /**
+    * Fired upon reception of server metadata (the response for GET /signalk)
+    *
+    * @event Connection#metadata
+    * @type {error}
+    */
 }
+
+
+/**
+ * Initiate a connection to a Signal K server
+ * @returns {Promise<Connection>}
+ */
+function connect(url) {
+}
+
 
 /**
  * Signal K Discovery process.
