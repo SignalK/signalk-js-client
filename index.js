@@ -19,7 +19,6 @@ if(!WebSocket && typeof window === 'undefined') {
   WebSocket = NodeWebSocket;
 }
 
-
 //Workaround for Avahi oddity on RPi
 //https://github.com/agnat/node_mdns/issues/130
 function getSequence(mdns) {
@@ -92,6 +91,44 @@ Client.prototype.connect = function(options) {
     );
   }
   return this.discoverAndConnect(options);
+}
+
+Client.prototype.connectP = function(options) {
+  console.log(options)
+  debug('connect')
+  debug(options)
+
+  var hostname = this.hostname;
+  var port = this.port;
+
+  if(options) {
+    hostname = options.hostname || hostname;
+    port = options.port || port;
+  }
+
+  return new Promise((resolve, reject) => {
+    const connectDeltaByUrl = this.connectDeltaByUrl.bind(this)
+    this.get('/signalk', hostname, port)
+      .then(function(response) {
+        debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
+        const onConnect = (connection) => {
+          if (options.onConnect) {
+            options.onConnect(connection)
+          }
+          resolve(connection)
+        }
+        const onError = (error) => {
+          if (options.onError) {
+            options.onError(error)
+          }
+          reject(error)
+        }
+        connectDeltaByUrl(response.body.endpoints.v1['signalk-ws'], options.onData, onConnect, options.onDisconnect, onError, options.onClose, options.subscribe)
+      })
+      .catch(error => {
+        reject(error)
+      })
+  })
 }
 
 Client.prototype.apiGet = function(path) {
