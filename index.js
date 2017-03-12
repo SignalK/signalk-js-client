@@ -99,8 +99,8 @@ Client.prototype.apiGet = function(path) {
 }
 
 Client.prototype.get = function(path, hostname, port) {
-  return agent('GET', 'http://' + (this.hostname || hostname) + ':' +
-      (this.port || port) + path);
+  return agent('GET', 'http://' + (hostname || this.hostname) + ':' +
+      (port || this.port) + path);
 }
 
 Client.prototype.discoveryAvailable = function() {
