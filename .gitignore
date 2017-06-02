@@ -3,3 +3,4 @@ node_modules
 *.db
 logs/*
 bower_components
+dist

@@ -1,11 +1,13 @@
 {
   "name": "signalk-client",
-  "version": "0.0.1-3",
+  "version": "0.0.1-4",
   "description": "Signal K JavaScript client",
-  "main": "index.js",
+  "main": "./dist/index.js",
   "scripts": {
     "test": "mocha",
     "changelog": "github-changes -o signalk -r signalk-js-client -a --only-pulls --use-commit-body --data=pulls",
+    "build": "babel index.js --out-dir dist",
+    "prepublish": "NODE_ENV=production npm run build",
     "doc": "jsdoc -r lib"
   },
   "keywords": [
@@ -30,6 +32,9 @@
     "ws": "^3.0.0"
   },
   "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-babili": "^0.1.2",
+    "babel-preset-es2015": "^6.24.1",
     "chai": "^4.0.1",
     "github-changes": "^1.1.0",
     "jsdoc": "^3.4.0"
