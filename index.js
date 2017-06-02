@@ -106,18 +106,18 @@ Client.prototype.connectP = function(options) {
     port = options.port || port;
   }
 
-  return new Promise((resolve, reject) => {
-    const connectDeltaByUrl = this.connectDeltaByUrl.bind(this)
+  return new Promise(function (resolve, reject) {
+    var connectDeltaByUrl = this.connectDeltaByUrl.bind(this)
     this.get('/signalk', hostname, port)
       .then(function(response) {
         debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
-        const onConnect = (connection) => {
+        var onConnect = function(connection) {
           if (options.onConnect) {
             options.onConnect(connection)
           }
           resolve(connection)
         }
-        const onError = (error) => {
+        var onError = function(error) {
           if (options.onError) {
             options.onError(error)
           }
@@ -125,7 +125,7 @@ Client.prototype.connectP = function(options) {
         }
         connectDeltaByUrl(response.body.endpoints.v1['signalk-ws'], options.onData, onConnect, options.onDisconnect, onError, options.onClose, options.subscribe)
       })
-      .catch(error => {
+      .catch(function(error) {
         reject(error)
       })
   })
@@ -145,7 +145,7 @@ Client.prototype.discoveryAvailable = function() {
 }
 
 Client.prototype.startDiscovery = function() {
-  const that = this
+  var that = this
   return new Promise(function(resolve, reject) {
     if(!that.discoveryAvailable()) {
       console.log("Discovery requires mdns, please install it with 'npm install mdns' or specify hostname and port")
@@ -153,7 +153,7 @@ Client.prototype.startDiscovery = function() {
     }
 
     //use dynamic require & maybe fool packagers
-    const mdns = require('md' + 'ns');
+    var mdns = require('md' + 'ns');
 
     that.browser = mdns.createBrowser(mdns.tcp('signalk-http'), {
       resolverSequence: [
@@ -166,7 +166,7 @@ Client.prototype.startDiscovery = function() {
       that.get('/signalk', service.host, service.port)
         .then(function(response) {
           debug("Got " + JSON.stringify(response.body.endpoints, null, 2));
-          let discovery = {
+          var discovery = {
             host: service.host,
             port: service.port,
             httpResponse: response.body,
@@ -191,8 +191,9 @@ Client.prototype.stopDiscovery = function() {
 
 Client.prototype.discoverAndConnect = function(options) {
   debug('discoverAndConnect');
-  const that = this;
-  return this.startDiscovery().then(function({httpResponse}) {
+  var that = this;
+  return this.startDiscovery().then(function(discovery) {
+    var httpResponse = discovery.httpResponse
     that.endpoints = httpResponse.endpoints
     debug("Connecting to " + JSON.stringify(_object.values(that.endpoints)[0]['signalk-ws'], null, 2))
     that.stopDiscovery()
