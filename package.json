@@ -20,9 +20,9 @@
   "author": "Teppo Kurki <teppo.kurki@iki.fi>",
   "license": "Apache-2.0",
   "dependencies": {
-    "bluebird": "^3.0.0",
-    "debug": "^2.2.0",
-    "eventemitter3": "^2.0.2",
+    "bluebird": "^3.5.0",
+    "debug": "^2.6.8",
+    "eventemitter3": "^2.0.3",
     "lodash": "^4.0.1",
     "superagent": "^3.3.2",
     "superagent-promise": "^1.0.3",
@@ -30,8 +30,8 @@
     "ws": "^2.1.0"
   },
   "devDependencies": {
-    "chai": "^3.5.0",
-    "github-changes": "^1.0.4",
+    "chai": "^4.0.1",
+    "github-changes": "^1.1.0",
     "jsdoc": "^3.4.0"
   }
 }
