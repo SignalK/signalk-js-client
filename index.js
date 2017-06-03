@@ -32,26 +32,25 @@ function getSequence(mdns) {
 }
 
 /**
- * @module signalk-client
- */
-
-/**
- * @name Signal K Client Library
+ * @summary Create a new Signal K Client
  *
- * This library makes it a little easier to interface with Signal K servers via the REST API and WebSockets. To use it,
- * create a new Client object. The contstructor takes three optional parameters: hostname, port, and a flag indicating
- * whether or not to use SSL. If no parameters are passed, connect() will attempt to discover a Signal K server on the
- * network via mDNS. Naturally, this doesn't work in the browser.
- *
+ * The constructor takes three optional parameters: hostname, port, and a flag indicating whether or not to use SSL. If
+ * no parameters are passed, {@linkcode Client#connect} will attempt to discover a Signal K server on the network via
+ * mDNS. Naturally, this doesn't work in the browser.
  * It inherits from EventEmitter, so EventEmitter conventions apply.
+ *
+ * @param {string} hostname Host to connect to, e.g. localhost
+ * @param {number} port Pass undefined to use standard ports: 80/443
+ * @param {boolean} useSSL Does what it says on the tin
+ *
+ * @class
+ * This library makes it a little easier to interface with Signal K servers via the REST API and WebSockets. To use it,
+ * create a new Client object.
  *
  * @example
  * var client = new Client('localhost');
  * client.connect();
  *
- * @param {string} hostname
- * @param {number} port
- * @param {boolean} useSSL
  */
 function Client(hostname, port, useSSL) {
   EventEmitter.call(this)
@@ -67,6 +66,18 @@ function Client(hostname, port, useSSL) {
 require('util').inherits(Client, EventEmitter);
 
 /**
+ * @param {Object} options
+ * @param {string} options.hostname Deprecated
+ * @param {number} options.port Use 80 unless you have a reason not to
+ * @param {function} options.onData
+ * @param {function} options.onConnect
+ * @param {function} options.onDisconnect
+ * @param {function} options.onError
+ * @param {function} options.onClose
+ * @param {string} options.subscribe
+ *
+ * @returns Calls {@linkcode Client#connectDelta} or {@linkcode Client#discoverAndConnect} and returns the result of
+ * that function
  */
 Client.prototype.connect = function(options) {
   debug('connect');
@@ -93,6 +104,9 @@ Client.prototype.connect = function(options) {
   return this.discoverAndConnect(options);
 }
 
+/**
+ * @returns a Promise
+ */
 Client.prototype.connectP = function(options) {
   console.log(options)
   debug('connect')
@@ -181,6 +195,9 @@ Client.prototype.startDiscovery = function() {
   })
 }
 
+/**
+ * Stops mDNS discovery. Called by {@codelink discoverAndConnect} after it has found an mDNS endpoint.
+ */
 Client.prototype.stopDiscovery = function() {
   debug('Stopping discovery');
   if(this.browser) {
@@ -189,6 +206,9 @@ Client.prototype.stopDiscovery = function() {
   }
 }
 
+/**
+ * @returns A Promise
+ */
 Client.prototype.discoverAndConnect = function(options) {
   debug('discoverAndConnect');
   var that = this;
@@ -201,11 +221,40 @@ Client.prototype.discoverAndConnect = function(options) {
   });
 }
 
+/**
+ * Wrapper for {@linkcode Client#connectDeltaByUrl}
+ *
+ * The hostname parameter here is not related to the hostname that may have been passed to the constructor. However,
+ * the constructor's useSSL parameter determines whether or not to use SSL here.
+ *
+ * @param {string} hostname - The host to connect to, may include the port
+ * @param {messageCb} callback - Called whenever a new delta message arrives
+ * @param {connetCb} onConnect - Called when the WebSocket connection is established
+ * @param {function} onDisconnect - Not implemented
+ * @param {function} onError - Called if the WebSocket connection raises an error
+ * @param {function} onClose - Called when the WebSocket connection is closed
+ * @param {string} [subscribe] - Optional path to subscribe to
+ * @returns result of {@linkcode Client#connectDeltaByUrl}
+ */
 Client.prototype.connectDelta = function(hostname, callback, onConnect, onDisconnect, onError, onClose, subscribe) {
   var url = "ws://" + hostname + "/signalk/v1/stream" + (subscribe ? '?subscribe=' + subscribe : '');
   return this.connectDeltaByUrl(url, callback, onConnect, onDisconnect, onError, onClose);
 }
 
+/**
+ *
+ * If the application includes the Primus library, connectDeltaByUrl will use it and Primus will handle reconnecting to
+ * the server automatically. If the client application does not include Primus, then this will fall back to using the
+ * native WebSockets interface and the client application is responsible for restarting the connection if it is lost.
+ *
+ * @param {string} wsUrl - WebSocket url to connect to, e.g. ws://localhost/signalk/v1/stream
+ * @param {messageCb} callback - Called whenever a new delta message arrives
+ * @param {connectCb} onConnect - Called when the WebSocket connection is established
+ * @param {function} onDisconnect - Not implemented
+ * @param {function} onError - Called if the WebSocket connection raises an error
+ * @param {function} onClose - Called when the WebSocket connection is closed
+ * @param {string} [subscribe] - Optional path to subscribe to
+ */
 Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisconnect, onError, onClose) {
   var theUrl = url.parse(wsUrl);
   this.hostname = theUrl.hostname;
@@ -290,8 +339,8 @@ Client.prototype.connectDeltaByUrl = function(wsUrl, callback, onConnect, onDisc
 /**
  * getSelf
  *
- * Returns the current contents of the Signal K tree for your vessel (or at
- * least the contents of the Signal K tree pointed to by `self`.
+ * Returns the current contents of the Signal K tree for your vessel (or at least the contents of the Signal K tree
+ * pointed to by self).
  *
  * @returns {Promise}
  */
@@ -307,11 +356,9 @@ Client.prototype.getSelf = function() {
 }
 
 /**
- *
  * getSelfMatcher
  *
- * @returns {function} that can be passed to a filter function to select delta
- * messages just for your vessel.
+ * @returns {function} A function that can be passed to a filter function to select delta messages just for your vessel.
  */
 Client.prototype.getSelfMatcher = function() {
   return this.getSelf().then(function(result) {
@@ -332,6 +379,16 @@ Client.prototype.getSelfMatcher = function() {
   });
 }
 
+/**
+ * Fetch meta data from the server for a Signal K path specified by prefix and path.
+ *
+ * @param {string} prefix
+ * @param {string} path - Path to get metadata for
+ * @returns A Signal K metadata object
+ *
+ * @example
+ * var metadata = client.getMeta('self', 'navigation.speedOverGround');
+ */
 Client.prototype.getMeta = function(prefix, path) {
   return this.get(prefix + "/" + path.split('.').join('/') + '/meta');
 }
@@ -370,3 +427,16 @@ module.exports = {
   isDelta: isDelta,
   isHello: isHello
 }
+
+/**
+ * @callback messageCb
+ * @param {Object} msg - Signal K Delta
+ */
+
+/**
+ * @callback connectCb
+ * @param {Object} skConnection
+ * @param {string} skConnection.hostname - hostname of the currently connected server
+ * @param {function} skConnection.send - a function taking a single parameter, use to send data to the server
+ * @param {string} skConnection.disconnect - call to close the connection to the Signal K server
+ */
