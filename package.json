@@ -1,14 +1,16 @@
 {
   "name": "signalk-client",
-  "version": "0.0.1-4",
-  "description": "Signal K JavaScript client",
+  "version": "0.0.1-5",
+  "description": "Signal K JavaScript Client",
   "main": "./dist/index.js",
   "scripts": {
     "test": "mocha",
+    "lint": "eslint index.js",
+    "prettier": "prettier --print-width 119 --single-quote --trailing-comma es5 --no-bracket-spacing --write *.js",
     "changelog": "github-changes -o signalk -r signalk-js-client -a --only-pulls --use-commit-body --data=pulls",
     "build": "babel index.js --out-dir dist",
-    "prepublish": "NODE_ENV=production npm run build",
-    "doc": "jsdoc -r lib"
+    "prepublish": "NODE_ENV=production npm run lint && npm run build",
+    "doc": "jsdoc -R README.md index.js"
   },
   "keywords": [
     "Signal K",
@@ -36,7 +38,10 @@
     "babel-preset-babili": "^0.1.2",
     "babel-preset-es2015": "^6.24.1",
     "chai": "^4.0.1",
+    "eslint": "^3.19.0",
+    "eslint-plugin-es5": "^1.1.0",
     "github-changes": "^1.1.0",
-    "jsdoc": "^3.4.0"
+    "jsdoc": "^3.4.0",
+    "prettier": "^1.4.1"
   }
 }

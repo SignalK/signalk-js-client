@@ -1,6 +1,7 @@
 ## Change Log
 
-### upcoming (2017/03/12 20:56 +00:00)
+### v0.0.1-4 (2017/06/02 19:49 +00:00)
+- [#20](https://github.com/SignalK/signalk-js-client/pull/20) Backport to ES5 (@tkurki)
 - [#17](https://github.com/SignalK/signalk-js-client/pull/17) Add Promise based connectP method (@tkurki)
 - [#16](https://github.com/SignalK/signalk-js-client/pull/16) Update ws to the latest version 🚀 (@greenkeeper[bot])
 
