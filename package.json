@@ -7,7 +7,7 @@
     "test": "mocha",
     "lint": "eslint index.js || exit 0",
     "changelog": "github-changes -o signalk -r signalk-js-client -a --only-pulls --use-commit-body --data=pulls",
-    "doc": "jsdoc -r lib"
+    "doc": "rm -rf doc/* && jsdoc -R README.md index.js -d doc -c jsdoc.conf"
   },
   "keywords": [
     "Signal K",
@@ -35,6 +35,7 @@
     "eslint": "^3.19.0",
     "eslint-plugin-es5": "^1.1.0",
     "github-changes": "^1.0.4",
-    "jsdoc": "^3.4.0"
+    "jsdoc": "^3.4.0",
+    "jsdoc-to-markdown": "^3.0.0"
   }
 }
