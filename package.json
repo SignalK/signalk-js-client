@@ -21,21 +21,24 @@
   "author": "Teppo Kurki <teppo.kurki@iki.fi>",
   "license": "Apache-2.0",
   "dependencies": {
-    "bluebird": "^3.0.0",
-    "debug": "^2.2.0",
-    "eventemitter3": "^2.0.2",
-    "lodash": "^4.0.1",
-    "superagent": "^3.3.2",
-    "superagent-promise": "^1.0.3",
+    "bluebird": "^3.5.0",
+    "debug": "^2.6.8",
+    "eventemitter3": "^2.0.3",
+    "lodash": "^4.17.4",
+    "superagent": "^3.5.2",
+    "superagent-promise": "^1.1.0",
     "url": "^0.11.0",
-    "ws": "^2.1.0"
+    "ws": "^3.0.0"
   },
   "devDependencies": {
-    "chai": "^3.5.0",
+    "chai": "^4.0.2",
     "eslint": "^3.19.0",
     "eslint-plugin-es5": "^1.1.0",
-    "github-changes": "^1.0.4",
-    "jsdoc": "^3.4.0",
-    "jsdoc-to-markdown": "^3.0.0"
+    "expect.js": "^0.3.1",
+    "github-changes": "^1.1.0",
+    "jsdoc": "^3.4.3",
+    "jsdoc-to-markdown": "^3.0.0",
+    "mocha": "^3.4.2",
+    "nock": "^9.0.13"
   }
 }
