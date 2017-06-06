@@ -20,7 +20,7 @@
  * @param {function} [options.onOpen] callback called when the connection is opened, takes no parameters
  * @param {Object} [mdns] If you want to use mDNS with the Signal K client, pass it in here
  *
- * @returns {Promise}
+ * @returns {Client}
  *
  * @example
  * import mdns from 'mdns';
@@ -64,6 +64,25 @@
  *
  */
 function Client(options) {
+  this.options = {
+    port: 80,
+    useTLS: false,
+    version: 'v1'
+  };
+
+  if(typeof options === 'undefined') {
+    throw new Error('Constructor takes at least one parameter');
+  } else if(typeof options === 'string') {
+    this.hostname = options;
+    this.options.hostname = options;
+  } else if(typeof options === 'object') {
+    this.options = Object.assign({}, this.options, options);
+    this.hostname = options.hostname;
+  }
+
+  if(options.useTLS && typeof options.port === 'undefined') {
+    this.options.port = 443;
+  }
 }
 
 /**
@@ -327,3 +346,5 @@ Client.prototype.stopDiscovery = function() {
  * @callback newHostHandler
  * @param {Object} newHost Signal K host description object
  */
+
+module.exports = Client;
