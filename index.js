@@ -1,3 +1,10 @@
+const url = require('url');
+const Promise = this.Promise || require('bluebird');
+const request = require('superagent-promise')(require('superagent'), Promise);
+const WebSocket = global.WebSocket || global.MozWebSocket || require('ws');
+
+const subscriptionTypes = ['none', 'self', 'all'];
+
 /**
  * @class
  * @summary Create a new Signal K Client
@@ -80,9 +87,26 @@ function Client(options) {
     this.hostname = options.hostname;
   }
 
-  if(options.useTLS && typeof options.port === 'undefined') {
-    this.options.port = 443;
+  if(options.useTLS) {
+    this.protocol = 'https';
+    this.wsProtocol = 'wss';
+
+    // User did not specify port, assume standard 443
+    if(typeof options.port === 'undefined') {
+      this.options.port = 443;
+    }
+  } else {
+    this.protocol = 'http';
+    this.wsProtocol = 'ws';
   }
+
+  this.baseUrl = this.protocol + '://' + this.hostname;
+
+  if(!(this.options.port === 80 || this.options.port === 443)) {
+    this.baseUrl += ':' + this.options.port;
+  }
+
+  this.baseUrl += '/signalk'
 }
 
 /**
@@ -100,9 +124,6 @@ function Client(options) {
  * @param {enum} subscriptionType One of `none`, `self` or `all`.
  *
  * @example
- * import mdns from 'mdns';
- * import Primus from 'primus';
- *
  * // Event handler setup and client instantiation, as above
  *
  * const skConnection = skClient.connect().then(function(skConnection) {
@@ -129,7 +150,48 @@ function Client(options) {
  *   // do something with the skConnection object.
  * });
  */
-Client.prototype.connect = function(options) {
+Client.prototype.connect = function(subscriptionType) {
+  const {version, onOpen, onClose, onMessage, onError} = this.options;
+
+  const params = arguments;
+
+  return request('GET', this.baseUrl).then(function(response) {
+    return JSON.parse(response.body).endpoints[version];
+  }).then(function(endpoints) {
+    if(typeof endpoints === 'undefined') {
+      throw new Error('Server does not support Signal K version ' + version);
+    }
+
+    const wsUrl = url.parse(endpoints['signalk-ws']);
+    wsUrl.protocol = this.wsProtocol;
+
+    const paths = [];
+
+    if(params.length < 2) {
+      if(subscriptionTypes.includes(subscriptionType)) {
+        this.wsPath = wsUrl.href + '?subscribe=' + subscriptionType;
+      } else {
+        this.wsPath = wsUrl.href + '?subscribe=none';
+        paths.push({path: subscriptionType});
+      }
+    } else {
+      Array.prototype.slice.call(params).forEach(function(p) {
+        paths.push({path: p});
+      });
+    }
+
+    const ws = new WebSocket(this.wsPath);
+    ws.onopen = onOpen;
+    ws.onmessage = onMessage;
+    ws.onclose = onClose;
+    ws.onerror = onError;
+
+    ws.send(JSON.stringify({context: 'vessels.self', subscribe: paths}));
+
+    return {
+      wsUrl: this.wsPath
+    };
+  });
 }
 
 /**

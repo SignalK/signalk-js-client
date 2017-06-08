@@ -7,7 +7,8 @@
     "changelog": "github-changes -o signalk -r signalk-js-client -a --only-pulls --use-commit-body --data=pulls",
     "doc": "rm -rf doc/* && jsdoc -R README.md index.js -d doc -c jsdoc.conf",
     "lint": "eslint index.js",
-    "test": "mocha"
+    "test": "mocha",
+    "test-watch": "mocha --watch"
   },
   "keywords": [
     "Signal K",
@@ -22,8 +23,10 @@
   "license": "Apache-2.0",
   "dependencies": {
     "bluebird": "^3.5.0",
+    "chai-as-promised": "^6.0.0",
     "superagent": "^3.5.2",
     "superagent-promise": "^1.1.0",
+    "url": "^0.11.0",
     "ws": "^3.0.0"
   },
   "devDependencies": {
@@ -34,6 +37,8 @@
     "github-changes": "^1.1.0",
     "jsdoc-to-markdown": "^3.0.0",
     "mocha": "^3.4.2",
+    "mock-socket": "^6.1.0",
+    "sinon": "^2.3.2",
     "superagent-mock": "^3.4.0"
   }
 }
