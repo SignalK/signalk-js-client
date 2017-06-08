@@ -1,40 +1,44 @@
 {
   "name": "signalk-client",
-  "version": "0.0.1-4",
-  "description": "Signal K JavaScript client",
+  "version": "0.2.0-alpha1",
+  "description": "Signal K JavaScript Client",
   "main": "index.js",
   "scripts": {
-    "test": "mocha",
-    "lint": "eslint index.js || exit 0",
     "changelog": "github-changes -o signalk -r signalk-js-client -a --only-pulls --use-commit-body --data=pulls",
-    "doc": "jsdoc -r lib"
+    "doc": "rm -rf doc/* && jsdoc -R README.md index.js -d doc -c jsdoc.conf",
+    "lint": "eslint index.js",
+    "test": "mocha",
+    "test-watch": "mocha --watch"
   },
   "keywords": [
     "Signal K",
-    "SignalK",
-    "JavaScript"
+    "SignalK"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/signalk/signalk-js-client"
-  },
-  "author": "Teppo Kurki <teppo.kurki@iki.fi>",
+  "repository": "signalk/signalk-js-client",
+  "author": "The Signal K Developers <info@signalk.org>",
+  "contributors": [
+    "Tim Mathews <tim@signalk.org>",
+    "Teppo Kurki <tjk@signalk.org>"
+  ],
   "license": "Apache-2.0",
   "dependencies": {
-    "bluebird": "^3.0.0",
-    "debug": "^2.2.0",
-    "eventemitter3": "^2.0.2",
-    "lodash": "^4.0.1",
-    "superagent": "^3.3.2",
-    "superagent-promise": "^1.0.3",
+    "bluebird": "^3.5.0",
+    "chai-as-promised": "^6.0.0",
+    "superagent": "^3.5.2",
+    "superagent-promise": "^1.1.0",
     "url": "^0.11.0",
-    "ws": "^2.1.0"
+    "ws": "^3.0.0"
   },
   "devDependencies": {
-    "chai": "^3.5.0",
+    "chai": "^4.0.2",
     "eslint": "^3.19.0",
     "eslint-plugin-es5": "^1.1.0",
-    "github-changes": "^1.0.4",
-    "jsdoc": "^3.4.0"
+    "expect.js": "^0.3.1",
+    "github-changes": "^1.1.0",
+    "jsdoc-to-markdown": "^3.0.0",
+    "mocha": "^3.4.2",
+    "mock-socket": "^6.1.0",
+    "sinon": "^2.3.2",
+    "superagent-mock": "^3.4.0"
   }
 }
