@@ -9,7 +9,7 @@
     "prettier": "prettier --print-width 119 --single-quote --trailing-comma es5 --no-bracket-spacing --write *.js",
     "changelog": "github-changes -o signalk -r signalk-js-client -a --only-pulls --use-commit-body --data=pulls",
     "build": "babel index.js --out-dir dist",
-    "prepublish": "NODE_ENV=production npm run lint && npm run build",
+    "prepublish": "npm run lint && NODE_ENV=production npm run build",
     "doc": "jsdoc -R README.md index.js"
   },
   "keywords": [
