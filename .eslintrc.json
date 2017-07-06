@@ -1,0 +1,8 @@
+{
+  "plugins": [
+    "es5"
+  ],
+  "extends": [
+    "plugin:es5/no-es2015"
+  ]  
+}
