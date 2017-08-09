@@ -319,6 +319,8 @@ Client.prototype.getSelfMatcher = function() {
     var selfId = selfData.mmsi || selfData.uuid;
 
     if(selfId) {
+      if (selfId === selfData.mmsi)	
+        selfId = 'urn:mrn:imo:mmsi:' + selfId;       
       var selfContext = 'vessels.' + selfId;
       return function(delta) {
         return(delta.context === 'self' || delta.context === 'vessels.self' ||
