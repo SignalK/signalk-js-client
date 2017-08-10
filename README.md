@@ -15,7 +15,7 @@ external](https://github.com/SignalK/instrumentpanel/blob/b66047dd6c3382d5981601
 ## Usage
 
 ```
-var SignalKClient = require('signalk-client').Client;
+var SignalKClient = require('@signalk/signalk-client').Client;
 var signalk = new SignalKClient;
 var connection;
 
