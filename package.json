@@ -23,22 +23,22 @@
   "license": "Apache-2.0",
   "dependencies": {
     "bluebird": "^3.5.0",
-    "chai-as-promised": "^6.0.0",
-    "superagent": "^3.5.2",
-    "superagent-promise": "^1.1.0",
     "url": "^0.11.0",
     "ws": "^3.0.0"
   },
   "devDependencies": {
     "chai": "^4.0.2",
-    "eslint": "^3.19.0",
+    "chai-as-promised": "^7.0.0",
+    "eslint": "^4.0.0",
     "eslint-plugin-es5": "^1.1.0",
     "expect.js": "^0.3.1",
     "github-changes": "^1.1.0",
     "jsdoc-to-markdown": "^3.0.0",
     "mocha": "^3.4.2",
-    "mock-socket": "^6.1.0",
-    "sinon": "^2.3.2",
-    "superagent-mock": "^3.4.0"
+    "mock-socket": "^7.0.0",
+    "sinon": "^3.0.0",
+    "superagent": "^3.5.2",
+    "superagent-mock": "^3.4.0",
+    "superagent-promise": "^1.1.0"
   }
 }
