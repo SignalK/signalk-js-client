@@ -28,11 +28,12 @@ var thisCallback = function(msg) {
 function connectDelta(host, thisCallback, onConnect, onDisconnect) {
   debug("Connecting to " + host);
 
-  //try mdns
+  // try mdns
   connection = signalk.discoverAndConnect();
-  if(connection){
+  if(connection) {
     return;
   }
+
   console.log("Could not use mdns, falling back to " + host);
 
   connection = signalk.connectDelta(host, thisCallback,
