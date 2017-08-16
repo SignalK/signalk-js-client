@@ -307,6 +307,24 @@ Client.prototype.getSelf = function() {
 }
 
 /**
+ * getSelfId
+ *
+ * Returns the self identity
+ *
+ * @returns {Promise}
+ */
+Client.prototype.getSelfId = function() {
+  var skUrl = {
+    protocol: this.protocol,
+    hostname: this.hostname,
+    port: this.port,
+    pathname: '/signalk/v1/api/self'
+  };
+
+  return agent('GET', url.format(skUrl));
+}
+
+/**
  *
  * getSelfMatcher
  *
@@ -314,7 +332,7 @@ Client.prototype.getSelf = function() {
  * messages just for your vessel.
  */
 Client.prototype.getSelfMatcher = function() {
-  return this.getSelf().then(function(result) {
+  return this.getSelfId().then(function(result) {
     var selfData = result.body;
     var selfId = selfData.mmsi || selfData.uuid;
 
