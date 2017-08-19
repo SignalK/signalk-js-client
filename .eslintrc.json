@@ -3,6 +3,15 @@
     "es5"
   ],
   "extends": [
+    "eslint:recommended",
     "plugin:es5/no-es2015"
-  ]  
+  ],
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "rules": {
+    "no-console": 0,
+    "no-empty": ["error", { "allowEmptyCatch": true }]
+  }
 }

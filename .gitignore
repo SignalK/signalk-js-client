@@ -1,5 +1,7 @@
 node_modules
 .DS_Store
 *.db
+*.log
 logs/*
 bower_components
+dist
