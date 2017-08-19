@@ -1,6 +1,6 @@
 {
   "name": "@signalk/signalk-client",
-  "version": "0.0.1-5",
+  "version": "0.1.0",
   "description": "Signal K JavaScript Client",
   "main": "./dist/index.js",
   "scripts": {
