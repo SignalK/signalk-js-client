@@ -156,7 +156,7 @@ Client.prototype.get = function(path, hostname, port) {
     protocol: this.protocol,
     hostname: hostname || this.hostname,
     port: port || this.port,
-    path: path
+    pathname: path
   };
 
   return agent('GET', url.format(apiUrl));
