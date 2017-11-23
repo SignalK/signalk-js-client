@@ -2,6 +2,7 @@ node_modules
 .DS_Store
 *.db
 *.swp
+*.log
 logs/*
 bower_components
 doc
