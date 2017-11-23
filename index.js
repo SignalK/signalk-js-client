@@ -106,28 +106,23 @@ function Client(options) {
     this.baseUrl += ':' + this.options.port;
   }
 
-  this.baseUrl += '/signalk'
+  this.baseUrl += '/signalk';
 }
 
 /**
  * @summary
- * Connect to a Signal K WebSocket stream. Takes a single optional parameter and returns a Promise.
+ * Connect to a Signal K server. Takes no arguments and returns a Promise.
  *
  * @description
- * The `connect` method establishes a Signal K WebSocket stream connection. If called with no parameter, `connect`
- * connects with the `subscribe` query parameter set to `none` and requires that the call to `connect` is followed by a
- * to one of the `subscribe*` functions on the {@link skConnection} object within the returned Promise.
- *
- * Refer the documentation of the [Subscription
- * Protocol](http://signalk.org/specification/master/subscription_protocol.html) for more details.
- *
- * @param {enum} subscriptionType One of `none`, `self` or `all`.
+ * Connect configures the Signal K Client with the capabilities of, and the URIs provided by the Signal K Server. A
+ * client must call connect after initialization. Note that this does not create a WebSockets connection. That is done
+ * later by calling subscribe.
  *
  * @example
  * // Event handler setup and client instantiation, as above
  *
  * const skConnection = skClient.connect().then(function(skConnection) {
- *   skConnection.subscribe('navigation.*', 'environment.*', 'propulsion.*')
+ *   skConnection.subscribe('navigation.*', 'environment.*', 'propulsion.*');
  *
  *   // or
  *   skConnection.subscribe({
@@ -146,69 +141,94 @@ function Client(options) {
  * });
  *
  * // or, if the host you're connecting to does not support the subscription protocol
- * const skConnection = skClient.connect('self').then(function(skConnection) {
+ * const skConnection = skClient.connect().then(function(skConnection) {
  *   // do something with the skConnection object.
  * });
  */
-Client.prototype.connect = function(subscriptionType) {
+Client.prototype.connect = function() {
   const {version, onOpen, onClose, onMessage, onError} = this.options;
+  let _self = this;
 
-  const params = arguments;
-
-  return request('GET', this.baseUrl).then(function(response) {
-    return JSON.parse(response.body).endpoints[version];
-  }).then(function(endpoints) {
-    if(typeof endpoints === 'undefined') {
-      throw new Error('Server does not support Signal K version ' + version);
+  return getEndpoints(this.baseUrl, version).then(function(urls) {
+    if(urls.ws) {
+      urls.ws.protocol = _self.wsProtocol;
+      _self.wsPath = urls.ws.href;
     }
 
-    const wsUrl = url.parse(endpoints['signalk-ws']);
-    wsUrl.protocol = this.wsProtocol;
+    if(urls.api) {
+      urls.api.protocol = _self.protocol;
+      _self.apiPath = urls.api.href;
+    }
 
-    const paths = [];
+    return _self;
+  });
+}
 
-    if(params.length < 2) {
-      if(subscriptionTypes.includes(subscriptionType)) {
-        this.wsPath = wsUrl.href + '?subscribe=' + subscriptionType;
+/**
+ * @summary
+ * Configure WebSocket subscription
+ *
+ * @detail
+ * If called with no parameters, subscribes to the default server stream. In most cases this will be all of the data in
+ * the `self` context. This is the expected behavior of a conformant Signal K server.
+ *
+ * If called with one or more string parameters, these parameters are treated as paths relative to the `self` context.
+ *
+ * To be more explicit in the subscription, or to specify objects outside of the `self` context pass a subscription
+ * object to subscribe.
+ */
+Client.prototype.subscribe = function(options) {
+  return new Promise((resolve, reject) => {
+    if(typeof this.wsPath == 'undefined' || this.wsPath === '') {
+      reject(new Error("Call 'connect()' first"));
+    }
+
+    const {onOpen, onMessage, onClose, onError} = this.options;
+
+    let paths = [];
+
+    if(arguments.length < 2) {
+      if(subscriptionTypes.includes(options)) {
+        this.wsPath += '?subscribe=' + options;
       } else {
-        this.wsPath = wsUrl.href + '?subscribe=none';
-        paths.push({path: subscriptionType});
+        this.wsPath += '?subscribe=none';
+        paths.push({path: options});
       }
     } else {
-      Array.prototype.slice.call(params).forEach(function(p) {
+      this.wsPath += '?subscribe=none';
+      Array.prototype.slice.call(arguments).forEach(p => {
         paths.push({path: p});
       });
     }
 
     const ws = new WebSocket(this.wsPath);
-    ws.onopen = onOpen;
+
     ws.onmessage = onMessage;
     ws.onclose = onClose;
-    ws.onerror = onError;
 
-    ws.send(JSON.stringify({context: 'vessels.self', subscribe: paths}));
+    ws.onerror = (error) => {
+      if(typeof onError === 'function') {
+        onError(error);
+      }
+      reject(error);
+    }
 
-    return {
-      wsUrl: this.wsPath
-    };
+    ws.onopen = () => {
+      ws.send(JSON.stringify({context: 'vessels.self', subscribe: paths}));
+      if(typeof onOpen === 'function') {
+        onOpen();
+      }
+      resolve();
+    }
   });
 }
 
 /**
- * `The connectSync` method takes the same arguments as the connect method and returns an {@link skConnection} object.
+ * A convenience function to subscribe to all Signal K data.
  *
- * This is a blocking method, prefer the Promise based connect instead.
- *
- * @returns {skConnection} A Signal K Connection object
- *
- * @example
- * const skConnection = skClient.connect('self');
- *
- * skConnection.subscribeAll();
- *
- * // or any of the other methods as described above
  */
-Client.prototype.connectSync = function(options) {
+Client.prototype.subscribeAll = function() {
+  return this.subscribe('all');
 }
 
 /**
@@ -226,6 +246,7 @@ Client.prototype.connectSync = function(options) {
  *
  */
 Client.prototype.get = function(path) {
+  return fetch();
 }
 
 /**
@@ -408,5 +429,25 @@ Client.prototype.stopDiscovery = function() {
  * @callback newHostHandler
  * @param {Object} newHost Signal K host description object
  */
+
+
+/**
+ * @param {string} skUrl Base URL for Signal K server (e.g. http://localhost:3000/signalk)
+ * @param {string} version Required Signal K version specified in Client constructor options
+ */
+function getEndpoints(skUrl, version) {
+  return request('GET', skUrl).then(function(response) {
+    return JSON.parse(response.body).endpoints[version];
+  }).then(function(endpoints) {
+    if(typeof endpoints === 'undefined') {
+      throw new Error('Server does not support Signal K version ' + version);
+    }
+
+    return {
+      ws: url.parse(endpoints['signalk-ws']),
+      api: url.parse(endpoints['signalk-http'])
+    };
+  });
+}
 
 module.exports = Client;

@@ -1,6 +1,11 @@
 const assert = require('chai').assert;
 const expect = require('expect.js');
+const mockedRequest = require('superagent');
+const mocks = require('./mock.config');
+const Server = require('mock-socket').Server;
 const Client = require('../index');
+
+require('superagent-mock')(mockedRequest, mocks);
 
 describe('Constructor', function() {
   it('with no parameters throws an error', function() {
@@ -9,21 +14,21 @@ describe('Constructor', function() {
   });
 
   it('with string parameter sets configures default options', function() {
-    const result = new Client('hostname');
+    const result = new Client('example.host');
 
     expect(result.options).to.eql({
-      hostname: 'hostname',
+      hostname: 'example.host',
       port: 80,
       useTLS: false,
       version: 'v1'
     });
 
-    expect(result.hostname).to.equal('hostname');
+    expect(result.hostname).to.equal('example.host');
   });
 
   it('with object parameter sets configuration options', function() {
     const result = new Client({
-      hostname: 'hostname',
+      hostname: 'example.host',
       port: 1234,
       useTLS: true,
       version: 'v3',
@@ -33,7 +38,7 @@ describe('Constructor', function() {
       onOpen: function() {}
     });
 
-    expect(result.hostname).to.equal('hostname');
+    expect(result.hostname).to.equal('example.host');
 
     assert.property(result.options, 'hostname');
     assert.property(result.options, 'port');
