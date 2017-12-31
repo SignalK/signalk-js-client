@@ -408,12 +408,8 @@ Client.prototype.getSelfId = function() {
  * @returns {function} A function that can be passed to a filter function to select delta messages just for your vessel.
  */
 Client.prototype.getSelfMatcher = function() {
-  return this.getSelfId().then(function(result) {
-    var selfData = result.body;
-    var selfId = selfData.mmsi || selfData.uuid;
-
-    if (selfId) {
-      var selfContext = 'vessels.' + selfId;
+  return this.getSelfId().then(function(selfContext) {
+    if (selfContext) {
       return function(delta) {
         return delta.context === 'self' || delta.context === 'vessels.self' || delta.context === selfContext;
       };
