@@ -31,7 +31,7 @@
     "superagent": "^3.5.2",
     "superagent-promise": "^1.0.3",
     "url": "^0.11.0",
-    "ws": "^3.0.0"
+    "ws": "^4.0.0"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",
