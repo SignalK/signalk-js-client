@@ -1,5 +1,5 @@
 *.log
 .babelrc
 .eslintrc
-index.js
-test
+/index.js
+/test
