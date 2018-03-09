@@ -1,5 +1,3 @@
-# @iloyalty/adapter-google-reporting
+# Signal K JS SDK
 
-> Google Core Reporting API adapter for the iLoyalty Platform.
-
-For more information, see: [www.loyaltymakers.nl](https://www.loyaltymakers.nl)
+> Work in progress.
