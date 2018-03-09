@@ -1,8 +1,4 @@
 {
-  "presets": ["es2015"],
-  "env": {
-    "production": {
-      "presets": ["babili"]
-    }
-  }
+  "presets": ["env"],
+  "plugins": ["transform-object-rest-spread"]
 }
