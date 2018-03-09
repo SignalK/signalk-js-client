@@ -374,6 +374,22 @@ describe('Signal K SDK', () => {
   })
 
   describe('Connection', () => {
+    it('... Reconnects after a fail or close until maxRetries is reached, at which point an event is emitted', done => {
+      const client = new Client({
+        hostname: 'poo.signalk.org',
+        port: 80,
+        useTLS: false,
+        maxRetries: 10
+      })
+
+      client.on('hitMaxRetries', () => {
+        assert(true)
+        done()
+      })
+
+      client.connect().catch(() => {})
+    }).timeout(60000)
+
     it('... Emits an "error" event after a failed connection attempt', done => {
       const client = new Client({
         hostname: 'poo.signalk.org',

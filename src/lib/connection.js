@@ -21,6 +21,7 @@ export default class Connection extends EventEmitter {
     this.connected = false
     this.socket = null
     this.lastMessage = -1
+    this._retries = 0
     this._connection = null
     this._self = ''
     this.reconnect()
@@ -78,6 +79,10 @@ export default class Connection extends EventEmitter {
   }
 
   reconnect () {
+    if (this._retries === this.options.maxRetries) {
+      this.emit('hitMaxRetries')
+    }
+
     if (this.socket !== null) {
       this.socket.close()
       this.socket = null
@@ -115,10 +120,11 @@ export default class Connection extends EventEmitter {
     this.socket.addEventListener('error', err => {
       this.emit('error', err)
 
-      if (this.options.reconnect === false || this.shouldDisconnect === true) {
+      if (this._retries > this.options.maxRetries || this.options.reconnect === false || this.shouldDisconnect === true) {
         return
       }
 
+      this._retries += 1
       this.reconnect()
     })
 
@@ -127,10 +133,11 @@ export default class Connection extends EventEmitter {
       this.socket = null
       this.emit('disconnect')
 
-      if (this.options.reconnect === false || this.shouldDisconnect === true) {
+      if (this._retries > this.options.maxRetries || this.options.reconnect === false || this.shouldDisconnect === true) {
         return
       }
 
+      this._retries += 1
       this.reconnect()
     })
   }
