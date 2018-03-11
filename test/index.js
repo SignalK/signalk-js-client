@@ -1,7 +1,28 @@
+import mdns from 'mdns'
 import Client, { Client as NamedClient } from '../src'
 import { assert } from 'chai'
 
 describe('Signal K SDK', () => {
+  describe('mDNS server discovery', () => {
+    it('... Emits an event when a Signal K host is found', done => {
+      const client = new Client({
+        reconnect: false,
+        mdns
+      })
+
+      let isDone = false
+
+      client.on('foundHost', host => {
+        if (isDone === false) {
+          done()
+          isDone = true
+        }
+      })
+
+      client.discover()
+    }).timeout(30000)
+  })
+
   describe('Subscriptions', () => {
     it('... Creates a subscription for navigation data', done => {
       const client = new Client({

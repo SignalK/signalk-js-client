@@ -26,16 +26,38 @@ export default class Client extends EventEmitter {
       autoConnect: false,
       reconnect: true,
       maxRetries: 100,
+      mdns: null,
       ...options
     }
 
     this.api = null
     this.connection = null
     this.subscriptions = {}
+    this.services = []
 
     if (this.options.autoConnect === true) {
       this.connect().catch(err => this.emit('error', err))
     }
+  }
+
+  discover () {
+    if (this.options.mdns === null) {
+      return
+    }
+
+    const browser = this.options.mdns.browseThemAll()
+
+    browser.on('serviceUp', service => {
+      if (!service || typeof service !== 'object') {
+        return
+      }
+
+      if (service.type.name.includes('signalk-ws')) {
+        this.emit('foundHost', service)
+      }
+    })
+
+    browser.start()
   }
 
   connect () {

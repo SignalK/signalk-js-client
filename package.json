@@ -1,5 +1,5 @@
 {
-  "name": "@decipherindustries/signalk-sdk",
+  "name": "@signalk/signalk-sdk",
   "version": "2.0.0",
   "description": "Signal K JavaScript/ECMAScript SDK",
   "main": "index.js",
@@ -8,6 +8,7 @@
     "start": "nodemon --exec babel-node src/index.js",
     "dist": "./node_modules/.bin/babel src -d dist",
     "prepublish": "./node_modules/.bin/babel src -d dist",
+    "postinstall": "./node_modules/.bin/babel src -d dist",
     "push": "npm publish --access public --scope @signalk ."
   },
   "keywords": [],
