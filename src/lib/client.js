@@ -40,6 +40,15 @@ export default class Client extends EventEmitter {
     }
   }
 
+  set (key, value) {
+    this.options[key] = value
+    return this
+  }
+
+  get (key) {
+    return this.options[key] || null
+  }
+
   discover () {
     if (this.options.mdns === null) {
       return
