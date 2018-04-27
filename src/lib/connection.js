@@ -9,7 +9,7 @@
 
 import EventEmitter from 'eventemitter3'
 import WebSocket from 'isomorphic-ws'
-import fetch from 'isomorphic-fetch'
+import fetch from 'cross-fetch'
 
 export default class Connection extends EventEmitter {
   constructor (options) {
