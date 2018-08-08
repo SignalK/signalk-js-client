@@ -55,3 +55,10 @@ function connectDelta(host, thisCallback, onConnect, onDisconnect) {
   );
 }
 ```
+
+
+## Other Signal K Clients:
+**Angular:**
+Signal K client for the Angular framework
+[signalk-client-angular](https://github.com/panaaj/signalk-client-angular)
+
