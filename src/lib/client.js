@@ -106,17 +106,17 @@ export default class Client extends EventEmitter {
     this.removeAllListeners('error')
     this.removeAllListeners('hitMaxRetries')
 
-    if (this.connection !== null) {
-      this.connection.disconnect()
-      this.connection = null
-    }
-
     if (Object.keys(this.subscriptions).length > 0) {
       Object.keys(this.subscriptions).forEach(name => {
         const subscription = this.subscriptions[name]
         subscription.unsubscribe()
         delete this.subscriptions[name]
       })
+    }
+
+    if (this.connection !== null) {
+      this.connection.disconnect()
+      this.connection = null
     }
 
     if (this.api !== null) {
