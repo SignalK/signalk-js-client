@@ -25,6 +25,11 @@ export default class Connection extends EventEmitter {
     this._connection = null
     this._self = ''
     this.reconnect()
+
+    this.onWSMessage = this._onWSMessage.bind(this)
+    this.onWSOpen = this._onWSOpen.bind(this)
+    this.onWSClose = this._onWSClose.bind(this)
+    this.onWSError = this._onWSError.bind(this)
   }
 
   set self (data) {
@@ -76,16 +81,15 @@ export default class Connection extends EventEmitter {
     this.connected = false
     this.httpURI = ''
     this.wsURI = ''
-
-    // if (this.socket !== null) {
-    //   this.socket.close()
-    //   this.socket = null
-    // }
   }
 
   reconnect () {
     if (this.socket !== null) {
       this.socket.close()
+      this.socket.removeEventListener('message', this.onWSMessage)
+      this.socket.removeEventListener('open', this.onWSOpen)
+      this.socket.removeEventListener('error', this.onWSError)
+      this.socket.removeEventListener('close', this.onWSClose)
       this.socket = null
     }
 
@@ -100,58 +104,68 @@ export default class Connection extends EventEmitter {
       return
     }
 
-    console.log('Attempting reconnect', this.options)
     this.shouldDisconnect = false
     this.socket = new WebSocket(this.wsURI)
+    this.socket.addEventListener('message', this.onWSMessage)
+    this.socket.addEventListener('open', this.onWSOpen)
+    this.socket.addEventListener('error', this.onWSError)
+    this.socket.addEventListener('close', this.onWSClose)
+  }
 
-    this.socket.addEventListener('message', evt => {
-      this.lastMessage = Date.now()
+  _onWSMessage (evt) {
+    this.lastMessage = Date.now()
+    let data = evt.data
 
-      let data = evt.data
-
-      try {
-        if (typeof data === 'string') {
-          data = JSON.parse(data)
-        }
-      } catch (e) {
-        console.log(`[Connection: ${this.options.hostname}] Error parsing data: ${e.message}`)
+    try {
+      if (typeof data === 'string') {
+        data = JSON.parse(data)
       }
+    } catch (e) {
+      console.log(`[Connection: ${this.options.hostname}] Error parsing data: ${e.message}`)
+    }
 
-      if (data && typeof data === 'object' && data.hasOwnProperty('name') && data.hasOwnProperty('version') && data.hasOwnProperty('roles')) {
-        this.connectionInfo = data
-      }
+    if (data && typeof data === 'object' && data.hasOwnProperty('name') && data.hasOwnProperty('version') && data.hasOwnProperty('roles')) {
+      this.connectionInfo = data
+    }
 
-      this.emit('message', evt.data)
-    })
+    this.emit('message', evt.data)
+  }
 
-    this.socket.addEventListener('open', () => {
-      this.connected = true
-      this.emit('connect')
-    })
+  _onWSOpen () {
+    this.connected = true
+    this.emit('connect')
+  }
 
-    this.socket.addEventListener('error', err => {
-      this.emit('error', err)
+  _onWSError (err) {
+    this.emit('error', err)
 
-      if (this._retries > this.options.maxRetries || this.options.reconnect === false || this.shouldDisconnect === true) {
-        return
-      }
+    if (this._retries > this.options.maxRetries || this.options.reconnect === false || this.shouldDisconnect === true) {
+      this.socket.removeEventListener('message', this.onWSMessage)
+      this.socket.removeEventListener('open', this.onWSOpen)
+      this.socket.removeEventListener('error', this.onWSError)
+      this.socket.removeEventListener('close', this.onWSClose)
+      return
+    }
 
-      this._retries += 1
-      this.reconnect()
-    })
+    this._retries += 1
+    this.reconnect()
+  }
 
-    this.socket.addEventListener('close', () => {
-      this.connected = false
-      this.socket = null
-      this.emit('disconnect')
+  _onWSClose () {
+    this.connected = false
+    this.socket = null
+    this.emit('disconnect')
 
-      if (this._retries > this.options.maxRetries || this.options.reconnect === false || this.shouldDisconnect === true) {
-        return
-      }
+    if (this._retries > this.options.maxRetries || this.options.reconnect === false || this.shouldDisconnect === true) {
+      this.socket.removeEventListener('message', this.onWSMessage)
+      this.socket.removeEventListener('open', this.onWSOpen)
+      this.socket.removeEventListener('error', this.onWSError)
+      this.socket.removeEventListener('close', this.onWSClose)
+      return
+    }
 
-      this._retries += 1
-      this.reconnect()
-    })
+    this._retries += 1
+    this.reconnect()
   }
 
   send (data) {
