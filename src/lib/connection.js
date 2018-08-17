@@ -104,6 +104,7 @@ export default class Connection extends EventEmitter {
       return
     }
 
+    console.log('Connecting to ' + this.wsURI + ' (initial = ' + initial + ')')
     this.shouldDisconnect = false
     this.socket = new WebSocket(this.wsURI)
     this.socket.addEventListener('message', this.onWSMessage)
