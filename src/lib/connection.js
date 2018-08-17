@@ -24,12 +24,13 @@ export default class Connection extends EventEmitter {
     this._retries = 0
     this._connection = null
     this._self = ''
-    this.reconnect()
 
     this.onWSMessage = this._onWSMessage.bind(this)
     this.onWSOpen = this._onWSOpen.bind(this)
     this.onWSClose = this._onWSClose.bind(this)
     this.onWSError = this._onWSError.bind(this)
+
+    this.reconnect(true)
   }
 
   set self (data) {
