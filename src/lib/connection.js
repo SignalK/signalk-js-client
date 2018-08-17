@@ -100,6 +100,7 @@ export default class Connection extends EventEmitter {
       return
     }
 
+    console.log('Attempting reconnect', this.options)
     this.shouldDisconnect = false
     this.socket = new WebSocket(this.wsURI)
 
