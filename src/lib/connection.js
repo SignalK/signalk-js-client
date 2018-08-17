@@ -84,16 +84,22 @@ export default class Connection extends EventEmitter {
   }
 
   reconnect () {
-    if (this._retries === this.options.maxRetries) {
-      this.emit('hitMaxRetries')
-    }
-
     if (this.socket !== null) {
       this.socket.close()
       this.socket = null
     }
 
     this.connected = false
+
+    if (this._retries === this.options.maxRetries) {
+      this.emit('hitMaxRetries')
+      return
+    }
+
+    if (this.options.reconnect === false || this.shouldDisconnect === true) {
+      return
+    }
+
     this.shouldDisconnect = false
     this.socket = new WebSocket(this.wsURI)
 
