@@ -71,7 +71,7 @@ export default class Client extends EventEmitter {
 
   connect () {
     if (this.connection !== null) {
-      this.connection.reconnect()
+      this.connection.reconnect(true)
       return Promise.resolve(this.connection)
     }
 
@@ -86,7 +86,7 @@ export default class Client extends EventEmitter {
 
       this.connection.on('connect', () => {
         this.emit('connect')
-        resolve()
+        resolve(this.connection)
       })
 
       this.connection.on('error', err => {
