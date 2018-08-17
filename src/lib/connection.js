@@ -76,6 +76,11 @@ export default class Connection extends EventEmitter {
     this.connected = false
     this.httpURI = ''
     this.wsURI = ''
+
+    if (this.socket !== null) {
+      this.socket.close()
+      this.socket = null
+    }
   }
 
   reconnect () {
