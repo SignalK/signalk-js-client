@@ -132,6 +132,7 @@ export default class Connection extends EventEmitter {
   }
 
   _onWSOpen () {
+    console.log('Connected to WS')
     this.connected = true
     this.emit('connect')
   }
@@ -140,10 +141,6 @@ export default class Connection extends EventEmitter {
     this.emit('error', err)
 
     if (this._retries > this.options.maxRetries || this.options.reconnect === false || this.shouldDisconnect === true) {
-      this.socket.removeEventListener('message', this.onWSMessage)
-      this.socket.removeEventListener('open', this.onWSOpen)
-      this.socket.removeEventListener('error', this.onWSError)
-      this.socket.removeEventListener('close', this.onWSClose)
       return
     }
 
@@ -153,7 +150,6 @@ export default class Connection extends EventEmitter {
 
   _onWSClose () {
     this.connected = false
-    this.socket = null
     this.emit('disconnect')
 
     if (this._retries > this.options.maxRetries || this.options.reconnect === false || this.shouldDisconnect === true) {
@@ -161,9 +157,11 @@ export default class Connection extends EventEmitter {
       this.socket.removeEventListener('open', this.onWSOpen)
       this.socket.removeEventListener('error', this.onWSError)
       this.socket.removeEventListener('close', this.onWSClose)
+      this.socket = null
       return
     }
 
+    this.socket = null
     this._retries += 1
     this.reconnect()
   }
