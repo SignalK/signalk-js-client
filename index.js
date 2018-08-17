@@ -151,9 +151,9 @@ Client.prototype.apiGet = function(path) {
   return this.get('/signalk/v1/api' + path);
 };
 
-Client.prototype.get = function(path, hostname, port) {
+Client.prototype.get = function(path, hostname, port, protocol) {
   var apiUrl = {
-    protocol: this.protocol,
+    protocol: protocol || this.protocol,
     hostname: hostname || this.hostname,
     port: port || this.port,
     pathname: path
@@ -195,10 +195,38 @@ Client.prototype.startDiscovery = function() {
         };
         that.emit('discovery', discovery);
         resolve(discovery); // only the first time will matter
+      }).catch( e => {
+        that.emit('discoveryError', { host: service.host, port: service.port, error: e})
+        console.error(`getting /signalk from ${service.host}:${service.port}: ${e}`)
       });
     });
-    debug('Starting discovery');
+    debug('Starting http discovery');
     that.browser.start();
+
+    that.httpsBrowser = mdns.createBrowser(mdns.tcp('signalk-https'), {
+      resolverSequence: [mdns.rst.DNSServiceResolve()],
+    });
+    that.httpsBrowser.on('serviceUp', function(service) {
+      debug('Discovered signalk-https:' + JSON.stringify(service, null, 2));
+      debug('GETting /signalk');
+      that.get('/signalk', service.host, service.port, 'https').then(function(response) {
+        debug('Got ' + JSON.stringify(response.body.endpoints, null, 2));
+        var discovery = {
+          host: service.host,
+          port: service.port,
+          httpResponse: response.body,
+          service: service,
+          protocol: 'wss'
+        };
+        that.emit('discovery', discovery);
+        resolve(discovery); // only the first time will matter
+      }).catch( e => {
+        that.emit('discoveryError', { host: service.host, port: service.port, error: e})
+        console.error(`getting /signalk from ${service.host}:${service.port}: ${e}`)
+      });
+    });
+    debug('Starting https discovery');
+    that.httpsBrowser.start();
   });
 };
 
@@ -209,7 +237,11 @@ Client.prototype.stopDiscovery = function() {
   debug('Stopping discovery');
   if (this.browser) {
     this.browser.stop();
-    debug('Discovery stopping');
+    debug('HTTP Discovery stopping');
+  }
+  if (this.httpsBrowser ) {
+    this.httpsBrowser.stop();
+    debug('HTTPS Discovery stopping');
   }
 };
 
