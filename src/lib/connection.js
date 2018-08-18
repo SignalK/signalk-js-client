@@ -153,7 +153,7 @@ export default class Connection extends EventEmitter {
     this.reconnect()
   }
 
-  _onWSClose () {
+  _onWSClose (evt) {
     // console.log('Connection#_onWSClose - called with wsURI:', this.wsURI)
     this.socket.removeEventListener('message', this.onWSMessage)
     this.socket.removeEventListener('open', this.onWSOpen)
@@ -164,7 +164,7 @@ export default class Connection extends EventEmitter {
     this.socket = null
     this._retries += 1
 
-    this.emit('disconnect')
+    this.emit('disconnect', evt)
     this.reconnect()
   }
 

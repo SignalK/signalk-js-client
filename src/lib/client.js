@@ -78,7 +78,7 @@ export default class Client extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.connection = new Connection(this.options)
 
-      this.connection.on('disconnect', () => this.emit('disconnect'))
+      this.connection.on('disconnect', data => this.emit('disconnect', data))
       this.connection.on('message', data => this.emit('message', data))
       this.connection.on('connectionInfo', data => this.emit('connectionInfo', data))
       this.connection.on('self', data => this.emit('self', data))
