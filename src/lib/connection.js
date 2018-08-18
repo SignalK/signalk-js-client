@@ -24,6 +24,7 @@ export default class Connection extends EventEmitter {
     this._retries = 0
     this._connection = null
     this._self = ''
+    this.isConnecting = false
 
     this.onWSMessage = this._onWSMessage.bind(this)
     this.onWSOpen = this._onWSOpen.bind(this)
@@ -84,6 +85,10 @@ export default class Connection extends EventEmitter {
   }
 
   reconnect (initial = false) {
+    if (this.isConnecting === true) {
+      return
+    }
+
     if (this.socket !== null) {
       // console.log('Connection#reconnect - closing socket')
       this.socket.close()
@@ -111,6 +116,8 @@ export default class Connection extends EventEmitter {
     // console.log(`Socket is ${this.socket === null ? '' : 'not '}NULL`)
 
     this.shouldDisconnect = false
+    this.isConnecting = true
+
     this.socket = new WebSocket(this.wsURI)
     this.socket.addEventListener('message', this.onWSMessage)
     this.socket.addEventListener('open', this.onWSOpen)
@@ -143,6 +150,7 @@ export default class Connection extends EventEmitter {
 
   _onWSOpen () {
     this.connected = true
+    this.isConnecting = false
     this.emit('connect')
   }
 
@@ -161,6 +169,7 @@ export default class Connection extends EventEmitter {
     this.socket.removeEventListener('close', this.onWSClose)
 
     this.connected = false
+    this.isConnecting = false
     this.socket = null
     this._retries += 1
 
