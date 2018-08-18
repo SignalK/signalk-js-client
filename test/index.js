@@ -3,7 +3,7 @@ import Client, { Client as NamedClient } from '../src'
 import { assert } from 'chai'
 
 describe('Signal K SDK', () => {
-  describe('mDNS server discovery', () => {
+  describe.skip('mDNS server discovery', () => {
     it('... Emits an event when a Signal K host is found', done => {
       const client = new Client({
         reconnect: false,
@@ -20,7 +20,7 @@ describe('Signal K SDK', () => {
       })
 
       client.discover()
-    }).timeout(30000)
+    }).timeout(15000)
   })
 
   describe('Subscriptions', () => {
@@ -395,6 +395,22 @@ describe('Signal K SDK', () => {
   })
 
   describe('Connection', () => {
+    it('... Successfully closes the connection and any connection attempts when "disconnect" is called', done => {
+      let client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        autoConnect: true
+      })
+
+      client.on('disconnect', () => {
+        client = null
+        done()
+      })
+
+      client.disconnect()
+    })
+
     it('... Reconnects after a fail or close until maxRetries is reached, at which point an event is emitted', done => {
       const client = new Client({
         hostname: 'poo.signalk.org',
@@ -502,6 +518,7 @@ describe('Signal K SDK', () => {
 
       client.connect()
     }).timeout(15000)
+    // */
   })
 
   describe('Module API', () => {

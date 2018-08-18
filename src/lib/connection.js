@@ -78,40 +78,48 @@ export default class Connection extends EventEmitter {
   }
 
   disconnect () {
+    // console.log('Connection#disconnect')
     this.shouldDisconnect = true
-    this.connected = false
-    this.httpURI = ''
-    this.wsURI = ''
+    this.reconnect()
   }
 
   reconnect (initial = false) {
     if (this.socket !== null) {
+      // console.log('Connection#reconnect - closing socket')
       this.socket.close()
-      this.socket.removeEventListener('message', this.onWSMessage)
-      this.socket.removeEventListener('open', this.onWSOpen)
-      this.socket.removeEventListener('error', this.onWSError)
-      this.socket.removeEventListener('close', this.onWSClose)
-      this.socket = null
+      return
     }
-
-    this.connected = false
 
     if (initial !== true && this._retries === this.options.maxRetries) {
       this.emit('hitMaxRetries')
+      this.cleanupListeners()
       return
     }
 
-    if (initial !== true && (this.options.reconnect === false || this.shouldDisconnect === true)) {
+    if (initial !== true && this.options.reconnect === false) {
+      // console.log('Not reconnecting, for reconnect is false')
+      this.cleanupListeners()
       return
     }
 
-    console.log('Connecting to ' + this.wsURI + ' (initial = ' + initial + ')')
+    if (initial !== true && this.shouldDisconnect === true) {
+      // console.log('Connection#reconnect - not reconnecting, shouldDisconnect is true')
+      this.cleanupListeners()
+      return
+    }
+
+    // console.log(`Socket is ${this.socket === null ? '' : 'not '}NULL`)
+
     this.shouldDisconnect = false
     this.socket = new WebSocket(this.wsURI)
     this.socket.addEventListener('message', this.onWSMessage)
     this.socket.addEventListener('open', this.onWSOpen)
     this.socket.addEventListener('error', this.onWSError)
     this.socket.addEventListener('close', this.onWSClose)
+  }
+
+  cleanupListeners () {
+    this.removeAllListeners()
   }
 
   _onWSMessage (evt) {
@@ -134,39 +142,29 @@ export default class Connection extends EventEmitter {
   }
 
   _onWSOpen () {
-    console.log('Connected to WS')
     this.connected = true
     this.emit('connect')
   }
 
   _onWSError (err) {
-    console.log('WS error', err)
-    this.emit('error', err)
-
-    if (this._retries > this.options.maxRetries || this.options.reconnect === false || this.shouldDisconnect === true) {
-      return
-    }
-
+    // console.log('WS error', err.message || '')
     this._retries += 1
+    this.emit('error', err)
     this.reconnect()
   }
 
   _onWSClose () {
-    console.log('Disconnected from WS')
+    // console.log('Connection#_onWSClose - called with wsURI:', this.wsURI)
+    this.socket.removeEventListener('message', this.onWSMessage)
+    this.socket.removeEventListener('open', this.onWSOpen)
+    this.socket.removeEventListener('error', this.onWSError)
+    this.socket.removeEventListener('close', this.onWSClose)
+
     this.connected = false
-    this.emit('disconnect')
-
-    if (this._retries > this.options.maxRetries || this.options.reconnect === false || this.shouldDisconnect === true) {
-      this.socket.removeEventListener('message', this.onWSMessage)
-      this.socket.removeEventListener('open', this.onWSOpen)
-      this.socket.removeEventListener('error', this.onWSError)
-      this.socket.removeEventListener('close', this.onWSClose)
-      this.socket = null
-      return
-    }
-
     this.socket = null
     this._retries += 1
+
+    this.emit('disconnect')
     this.reconnect()
   }
 

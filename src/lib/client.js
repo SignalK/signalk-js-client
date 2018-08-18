@@ -97,15 +97,6 @@ export default class Client extends EventEmitter {
   }
 
   disconnect (returnPromise = false) {
-    // Clean-up
-    this.removeAllListeners('self')
-    this.removeAllListeners('connectionInfo')
-    this.removeAllListeners('message')
-    this.removeAllListeners('delta')
-    this.removeAllListeners('connect')
-    this.removeAllListeners('error')
-    this.removeAllListeners('hitMaxRetries')
-
     if (Object.keys(this.subscriptions).length > 0) {
       Object.keys(this.subscriptions).forEach(name => {
         const subscription = this.subscriptions[name]
@@ -115,8 +106,14 @@ export default class Client extends EventEmitter {
     }
 
     if (this.connection !== null) {
+      this.connection.on('disconnect', () => {
+        this.cleanupListeners()
+        this.connection = null
+      })
+
       this.connection.disconnect()
-      this.connection = null
+    } else {
+      this.cleanupListeners()
     }
 
     if (this.api !== null) {
@@ -127,10 +124,20 @@ export default class Client extends EventEmitter {
       return Promise.resolve(this)
     }
 
+    return this
+  }
+
+  cleanupListeners () {
+    this.removeAllListeners('self')
+    this.removeAllListeners('connectionInfo')
+    this.removeAllListeners('message')
+    this.removeAllListeners('delta')
+    this.removeAllListeners('connect')
+    this.removeAllListeners('error')
+    this.removeAllListeners('hitMaxRetries')
     this.removeAllListeners('disconnect')
     this.removeAllListeners('unsubscribe')
     this.removeAllListeners('subscribe')
-    return this
   }
 
   API () {

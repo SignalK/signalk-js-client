@@ -41,6 +41,7 @@
     "eventemitter3": "^3.0.1",
     "isomorphic-ws": "^4.0.0",
     "moment": "^2.20.1",
+    "reconnectingwebsocket": "^1.0.0",
     "ws": "^5.0.0"
   }
 }
