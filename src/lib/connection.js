@@ -10,6 +10,9 @@
 import EventEmitter from 'eventemitter3'
 import WebSocket from 'isomorphic-ws'
 import fetch from 'cross-fetch'
+import Debug from 'debug'
+
+const debug = Debug('signalk-js-sdk/Connection')
 
 export default class Connection extends EventEmitter {
   constructor (options) {
@@ -21,6 +24,7 @@ export default class Connection extends EventEmitter {
     this.connected = false
     this.socket = null
     this.lastMessage = -1
+    this._authenticated = false
     this._retries = 0
     this._connection = null
     this._self = ''
@@ -30,6 +34,11 @@ export default class Connection extends EventEmitter {
     this.onWSOpen = this._onWSOpen.bind(this)
     this.onWSClose = this._onWSClose.bind(this)
     this.onWSError = this._onWSError.bind(this)
+
+    this._token = {
+      kind: '',
+      token: ''
+    }
 
     this.reconnect(true)
   }
@@ -79,7 +88,7 @@ export default class Connection extends EventEmitter {
   }
 
   disconnect () {
-    // console.log('Connection#disconnect')
+    debug('[disconnect] called')
     this.shouldDisconnect = true
     this.reconnect()
   }
@@ -90,7 +99,7 @@ export default class Connection extends EventEmitter {
     }
 
     if (this.socket !== null) {
-      // console.log('Connection#reconnect - closing socket')
+      debug('[reconnect] closing socket')
       this.socket.close()
       return
     }
@@ -102,22 +111,60 @@ export default class Connection extends EventEmitter {
     }
 
     if (initial !== true && this.options.reconnect === false) {
-      // console.log('Not reconnecting, for reconnect is false')
+      debug('[reconnect] Not reconnecting, for reconnect is false')
       this.cleanupListeners()
       return
     }
 
     if (initial !== true && this.shouldDisconnect === true) {
-      // console.log('Connection#reconnect - not reconnecting, shouldDisconnect is true')
+      debug('[reconnect] not reconnecting, shouldDisconnect is true')
       this.cleanupListeners()
       return
     }
 
-    // console.log(`Socket is ${this.socket === null ? '' : 'not '}NULL`)
+    debug(`[reconnect] socket is ${this.socket === null ? '' : 'not '}NULL`)
 
     this.shouldDisconnect = false
     this.isConnecting = true
 
+    if (this.options.useAuthentication === false) {
+      return this.initiateSocket()
+    }
+
+    const authRequest = {
+      method: 'POST',
+      mode: 'cors',
+      credentials: 'include',
+      body: JSON.stringify({
+        username: String(this.options.username || ''),
+        password: String(this.options.password || '')
+      })
+    }
+
+    this.fetch('/auth/login', authRequest)
+      .then(result => {
+        if (!result || typeof result !== 'object' || !result.hasOwnProperty('token')) {
+          throw new Error(`Unexpected response from auth endpoint: ${JSON.stringify(result)}`)
+        }
+
+        debug(`[reconnect] successful auth request: ${JSON.stringify(result, null, 2)}`)
+        
+        this._authenticated = true
+        this._token = {
+          kind: (typeof result.type === 'string' && result.type.trim() !== '') ? result.type : 'JWT',
+          token: result.token
+        }
+
+        this.initiateSocket()
+      })
+      .catch(err => {
+        this.emit('error', err)
+        debug(`[reconnect] error logging in: ${err.message}`)
+        this.disconnect()
+      })
+  }
+
+  initiateSocket () {
     this.socket = new WebSocket(this.wsURI)
     this.socket.addEventListener('message', this.onWSMessage)
     this.socket.addEventListener('open', this.onWSOpen)
@@ -126,6 +173,13 @@ export default class Connection extends EventEmitter {
   }
 
   cleanupListeners () {
+    debug(`[cleanupListeners] resetting auth and removing listeners`)
+    // Reset authentication
+    this._authenticated = false
+    this._token = {
+      kind: '',
+      token: ''
+    }
     this.removeAllListeners()
   }
 
@@ -155,14 +209,14 @@ export default class Connection extends EventEmitter {
   }
 
   _onWSError (err) {
-    // console.log('WS error', err.message || '')
+    debug('[_onWSError] WS error', err.message || '')
     this._retries += 1
     this.emit('error', err)
     this.reconnect()
   }
 
   _onWSClose (evt) {
-    // console.log('Connection#_onWSClose - called with wsURI:', this.wsURI)
+    debug('[_onWSClose] called with wsURI:', this.wsURI)
     this.socket.removeEventListener('message', this.onWSMessage)
     this.socket.removeEventListener('open', this.onWSOpen)
     this.socket.removeEventListener('error', this.onWSError)
@@ -182,8 +236,25 @@ export default class Connection extends EventEmitter {
       return Promise.reject(new Error('Not connected to WebSocket'))
     }
 
+    // Basic check if data is stringified JSON
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data)
+      } catch (e) {
+        debug(`[send] data is string but not valid JSON: ${e.message}`)
+      }
+    }
+
+    const isObj = (data && typeof data === 'object')
+
+    // Add token to data IF authenticated
+    // https://signalk.org/specification/1.3.0/doc/security.html#other-clients
+    if (isObj && this.useAuthentication === true && this._authenticated === true) {
+      data.token = String(this._token.token)
+    }
+
     try {
-      if (typeof data === 'object' && data !== null) {
+      if (isObj) {
         data = JSON.stringify(data)
       }
     } catch (e) {
@@ -199,13 +270,45 @@ export default class Connection extends EventEmitter {
       path = `/${path}`
     }
 
-    return fetch(`${this.httpURI}${path}`, opts)
+    if (!opts || typeof opts !== 'object') {
+      opts = {
+        method: 'GET'
+      }
+    }
+
+    if (!opts.headers || typeof opts.headers !== 'object') {
+      opts.headers = {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      }
+    }
+
+    if (this._authenticated === true && !path.includes('auth/login')) {
+      opts.headers = {
+        ...opts.headers,
+        Authorization: `${this._token.kind} ${this._token.token}`
+      }
+
+      opts.credentials = 'include'
+      opts.mode = 'cors'
+
+      debug(`[fetch] enriching fetch options with in-memory token`)
+    }
+
+    let URI = `${this.httpURI}${path}`
+
+    if (URI.includes('/api/auth/login')) {
+      URI = URI.replace('/api/auth/login', '/auth/login')
+    }
+
+    debug(`[fetch] ${opts.method || 'GET'} ${URI} ${JSON.stringify(opts, null, 2)}`)
+    return fetch(URI, opts)
       .then(response => {
         if (response.ok) {
           return response.json()
         }
 
-        throw new Error(`Error fetching ${this.httpURI}${path}: ${response.status} ${response.statusText}`)
+        throw new Error(`Error fetching ${URI}: ${response.status} ${response.statusText}`)
       })
   }
 }

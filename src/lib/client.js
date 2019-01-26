@@ -22,11 +22,14 @@ export default class Client extends EventEmitter {
       hostname: 'localhost',
       port: 3000,
       useTLS: true,
+      useAuthentication: false,
       version: 'v1',
       autoConnect: false,
       reconnect: true,
       maxRetries: 100,
       mdns: null,
+      username: null,
+      password: null,
       ...options
     }
 

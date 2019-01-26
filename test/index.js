@@ -520,6 +520,56 @@ describe('Signal K SDK', () => {
 
       client.connect()
     }).timeout(15000)
+
+    it('... Fails to get vessel in case of unauthenticated connection', done => {
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        reconnect: false
+      })
+
+      client.on('connect', () => {
+        client
+          .API()
+          .then(api => api.self())
+          .then(result => {
+            assert(result && typeof result === 'object' && result.hasOwnProperty('uuid'))
+            done(new Error('Got data when we shouldn\'t be authenticated'))
+          })
+          .catch(err => {
+            assert(err && typeof err === 'object' && typeof err.message === 'string' && err.message.includes('401'))
+            done()
+          })
+      })
+
+      client.connect()
+    }).timeout(15000)
+    
+    it('... Successfully authenticates with correct username/password', done => {
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        useAuthentication: true,
+        username: 'sdk@decipher.industries',
+        password: 'signalk',
+        reconnect: false
+      })
+
+      client.on('connect', () => {
+        client
+          .API()
+          .then(api => api.self())
+          .then(result => {
+            assert(result && typeof result === 'object' && result.hasOwnProperty('uuid'))
+            done()
+          })
+          .catch(err => done(err))
+      })
+
+      client.connect()
+    }).timeout(15000)
     // */
   })
 
