@@ -1,7 +1,7 @@
 {
-  "name": "@signalk/signalk-sdk",
-  "version": "2.0.0",
-  "description": "Signal K JavaScript/ECMAScript SDK",
+  "name": "@signalk/signalk-js-sdk",
+  "version": "2.0.2",
+  "description": "A Javascript SDK for Signal K servers. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s)",
   "main": "index.js",
   "scripts": {
     "test": "mocha --compilers js:babel-register",

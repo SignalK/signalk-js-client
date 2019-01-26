@@ -403,12 +403,14 @@ describe('Signal K SDK', () => {
         autoConnect: true
       })
 
+      client.on('connect', () => {
+        client.disconnect()
+      })
+
       client.on('disconnect', () => {
         client = null
         done()
       })
-
-      client.disconnect()
     })
 
     it('... Reconnects after a fail or close until maxRetries is reached, at which point an event is emitted', done => {
