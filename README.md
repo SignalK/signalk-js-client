@@ -26,6 +26,18 @@ client = new Client({
   autoConnect: false
 })
 
+// Instantiate client with authentication
+client = new Client({
+  hostname: 'hq.decipher.digital',
+  port: 3000,
+  useTLS: true,
+  useAuthentication: true,
+  reconnect: true,
+  autoConnect: false,
+  username: 'sdk@decipher.industries',
+  password: 'signalk'
+})
+
 // Discover client using mDNS
 client = new Client({
   mdns,
