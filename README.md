@@ -99,7 +99,7 @@ client
 
 ### PRE-1.0 RELEASE CHECKLIST
 - [x] mDNS server discovery
-- [ ] Security/authentication support
+- [x] Security/authentication support
 - [ ] Notifications/alarms support
 - [ ] Access Request mechanism (requesting)
 - [ ] Access Request mechanism (responding to requests, as a special case of notification)
@@ -114,3 +114,7 @@ client
 - [ ] Dynamic REST API based on `signalk-schema`
 - [ ] Multiple sources for a data point/"select" feature
 - [ ] History API support
+
+
+### NOTES
+- Security is implemented, but the token type is currently hardcoded to `JWT` if no `token.type` is returned by a SK server. IMHO that default should be `Bearer`. See issue
