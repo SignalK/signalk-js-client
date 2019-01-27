@@ -29,7 +29,8 @@ describe('Signal K SDK', () => {
         hostname: 'demo.signalk.org',
         port: 80,
         useTLS: false,
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       const opts = {
@@ -60,7 +61,8 @@ describe('Signal K SDK', () => {
         hostname: 'demo.signalk.org',
         port: 80,
         useTLS: false,
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       let isDone = false
@@ -86,7 +88,8 @@ describe('Signal K SDK', () => {
         hostname: 'demo.signalk.org',
         port: 80,
         useTLS: false,
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       let isDone = false
@@ -123,13 +126,34 @@ describe('Signal K SDK', () => {
     }).timeout(30000)
   })
 
+  describe('Notifications', () => {
+    it('... Connects and emits notifications', done => {
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        autoConnect: true,
+        notifications: true,
+        useAuthentication: true,
+        username: 'sdk@decipher.industries',
+        password: 'signalk'
+      })
+      
+      client.once('notification', notification => {
+        assert(notification && typeof notification === 'object' && notification.hasOwnProperty('path'))
+        done()
+      })
+    }).timeout(30000)
+  })
+
   describe('REST API', () => {
     const client = new Client({
       hostname: 'demo.signalk.org',
       port: 80,
       useTLS: false,
       reconnect: false,
-      autoConnect: true
+      autoConnect: true,
+      notifications: false
     })
 
     const groups = [
@@ -400,7 +424,8 @@ describe('Signal K SDK', () => {
         hostname: 'hq.decipher.digital',
         port: 3000,
         useTLS: false,
-        autoConnect: true
+        autoConnect: true,
+        notifications: false
       })
 
       client.on('connect', () => {
@@ -418,7 +443,8 @@ describe('Signal K SDK', () => {
         hostname: 'poo.signalk.org',
         port: 80,
         useTLS: false,
-        maxRetries: 10
+        maxRetries: 10,
+        notifications: false
       })
 
       client.on('hitMaxRetries', () => {
@@ -434,7 +460,8 @@ describe('Signal K SDK', () => {
         hostname: 'poo.signalk.org',
         port: 80,
         useTLS: false,
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       client.on('error', () => {
@@ -450,7 +477,8 @@ describe('Signal K SDK', () => {
         hostname: 'demo.signalk.org',
         port: 80,
         useTLS: false,
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       client.on('connect', () => {
@@ -466,7 +494,8 @@ describe('Signal K SDK', () => {
         hostname: 'poo.signalk.org',
         port: 80,
         useTLS: false,
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       client.connect().catch(() => {
@@ -480,7 +509,8 @@ describe('Signal K SDK', () => {
         hostname: 'demo.signalk.org',
         port: 80,
         useTLS: false,
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       client.connect().then(() => {
@@ -494,7 +524,8 @@ describe('Signal K SDK', () => {
         hostname: 'demo.signalk.org',
         port: 80,
         useTLS: false,
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       client.on('connectionInfo', () => {
@@ -510,7 +541,8 @@ describe('Signal K SDK', () => {
         hostname: 'demo.signalk.org',
         port: 80,
         useTLS: false,
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       client.on('self', self => {
@@ -527,7 +559,8 @@ describe('Signal K SDK', () => {
         // hostname: 'localhost',
         port: 3000,
         useTLS: false,
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       client.on('connect', () => {
@@ -556,7 +589,8 @@ describe('Signal K SDK', () => {
         useAuthentication: true,
         username: 'sdk@decipher.industries',
         password: 'signalk',
-        reconnect: false
+        reconnect: false,
+        notifications: false
       })
 
       client.on('connect', () => {

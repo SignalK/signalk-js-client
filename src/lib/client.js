@@ -12,8 +12,12 @@ import EventEmitter from 'eventemitter3'
 import Connection from './connection'
 import Subscription from './subscription'
 import API from './api'
+import Debug from 'debug'
+
+const debug = Debug('signalk-js-sdk/Client')
 
 export const SUBSCRIPTION_NAME = 'default'
+export const NOTIFICATIONS_SUBSCRIPTION = '__NOTIFICATIONS__'
 
 export default class Client extends EventEmitter {
   constructor (options = {}) {
@@ -23,6 +27,7 @@ export default class Client extends EventEmitter {
       port: 3000,
       useTLS: true,
       useAuthentication: false,
+      notifications: true,
       version: 'v1',
       autoConnect: false,
       reconnect: true,
@@ -37,6 +42,7 @@ export default class Client extends EventEmitter {
     this.connection = null
     this.subscriptions = {}
     this.services = []
+    this.notifications = {}
 
     if (this.options.autoConnect === true) {
       this.connect().catch(err => this.emit('error', err))
@@ -88,6 +94,9 @@ export default class Client extends EventEmitter {
       this.connection.on('hitMaxRetries', () => this.emit('hitMaxRetries'))
 
       this.connection.on('connect', () => {
+        if (this.options.notifications === true) {
+          this.subscribeToNotifications()
+        }
         this.emit('connect')
         resolve(this.connection)
       })
@@ -168,8 +177,8 @@ export default class Client extends EventEmitter {
     return null
   }
 
-  subscribe (options) {
-    const name = SUBSCRIPTION_NAME
+  subscribe (options, identifier) {
+    const name = (typeof identifier === 'string' && identifier.trim() !== '') ? identifier : SUBSCRIPTION_NAME
 
     if (this.connection === null) {
       return Promise.reject(new Error('There are no available connections. Please connect before subscribe.'))
@@ -183,7 +192,7 @@ export default class Client extends EventEmitter {
       return Promise.resolve(this.subscriptions[name])
     }
 
-    this.subscriptions[name] = new Subscription(this.connection, this.api, options)
+    this.subscriptions[name] = new Subscription(this.connection, this.api, options, identifier)
     this.subscriptions[name].on('unsubscribe', () => this.emit('unsubscribe'))
     this.subscriptions[name].on('subscribe', () => this.emit('subscribe', this.subscriptions[name]))
     this.subscriptions[name].on('delta', (delta) => this.emit('delta', delta))
@@ -201,5 +210,118 @@ export default class Client extends EventEmitter {
       this.removeAllListeners('unsubscribe')
       this.removeAllListeners('delta')
     }
+  }
+
+  subscribeToNotifications () {
+    if (this.subscriptions.hasOwnProperty(NOTIFICATIONS_SUBSCRIPTION)) {
+      return Promise.resolve(this.subscriptions[NOTIFICATIONS_SUBSCRIPTION])
+    }
+
+    if (this.connection === null) {
+      return Promise.reject(new Error('There are no available connections. Please connect before subscribe.'))
+    }
+
+    if (this.api === null) {
+      this.api = new API(this.connection)
+    }
+
+    const options = {
+      context: 'vessels.self',
+      subscribe: [{
+        path: 'notifications.*',
+        policy: 'instant'
+      }]
+    }
+
+    const flattenTree = (tree) => {
+      const flattened = {}
+      let cursor = tree
+      let currentPath = ''
+
+      const evaluateLeaf = (key) => {
+        currentPath += `${currentPath === '' ? '' : '.'}${key}`
+        cursor = cursor[key]
+
+        if (cursor && typeof cursor === 'object' && cursor.hasOwnProperty('value')) {
+          flattened[currentPath] = Object.assign({}, cursor.value)
+        } else {
+          Object.keys(cursor).forEach(evaluateLeaf)
+        }
+      }
+
+      Object.keys(cursor).forEach(key => evaluateLeaf(key))
+      return flattened
+    }
+
+    this.api
+      .notifications()
+      .then(result => {
+        this.notifications = {
+          ...this.notifications,
+          ...flattenTree(result)
+        }
+
+        Object.keys(this.notifications).forEach(path => {
+          const notification = {
+            path,
+            ...this.notifications[path]
+          }
+          debug(`[subscribeToNotifications] emitting initial notification: ${JSON.stringify(notification, null, 2)}`)
+          this.emit('notification', notification)
+        })
+      })
+      .catch(err => {
+        console.log(`[subscribeToNotifications] error getting initial notifications: ${err.message}`)
+      })
+
+    this.subscriptions[NOTIFICATIONS_SUBSCRIPTION] = new Subscription(this.connection, this.api, options, NOTIFICATIONS_SUBSCRIPTION)
+    this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].on('unsubscribe', () => this.emit('unsubscribe'))
+    this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].on('subscribe', () => this.emit('subscribe', this.subscriptions[NOTIFICATIONS_SUBSCRIPTION]))
+    this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].on('error', err => this.emit('error', err))
+
+    this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].on('delta', delta => {
+      if (!delta || typeof delta !== 'object') {
+        return
+      }
+
+      if (!Array.isArray(delta.updates)) {
+        return
+      }
+
+      const notifications = {}
+      delta.updates.forEach(update => {
+        if (!Array.isArray(update.values)) {
+          return
+        }
+
+        update.values.forEach(notification => {
+          if (typeof notification.path !== 'string' || !notification.path.includes('notifications.')) {
+            return
+          }
+
+          notifications[notification.path.replace('notifications.', '')] = {
+            ...notification.value
+          }
+        })
+      })
+
+      Object.keys(notifications).forEach(path => {
+        if (!this.notifications.hasOwnProperty(path) || this.notifications[path].timestamp !== notifications[path].timestamp) {
+          this.notifications[path] = {
+            ...notifications[path]
+          }
+
+          const notification = {
+            path,
+            ...this.notifications[path]
+          }
+          
+          debug(`[subscribeToNotifications] emitting notification: ${JSON.stringify(notification, null, 2)}`)
+          this.emit('notification', notification)
+        }
+      })
+    })
+
+    return this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].subscribe()
   }
 }

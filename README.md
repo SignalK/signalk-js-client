@@ -112,7 +112,7 @@ client
 ### PRE-1.0 RELEASE CHECKLIST
 - [x] mDNS server discovery
 - [x] Security/authentication (REST) support
-- [ ] Notifications/alarms support
+- [x] Basic notifications/alarms support
 - [ ] Access Request mechanism (requesting)
 - [ ] Access Request mechanism (responding to requests, as a special case of notification)
 - [ ] Security/authentication (WS) support (relies on request/response)
