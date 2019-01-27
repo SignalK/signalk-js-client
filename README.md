@@ -111,21 +111,23 @@ client
 
 ### PRE-1.0 RELEASE CHECKLIST
 - [x] mDNS server discovery
-- [x] Security/authentication support
+- [x] Security/authentication (REST) support
 - [ ] Notifications/alarms support
 - [ ] Access Request mechanism (requesting)
 - [ ] Access Request mechanism (responding to requests, as a special case of notification)
+- [ ] Security/authentication (WS) support (relies on request/response)
+- [ ] Master/slave detection during discovery, with correct selection. Should emit an event if multiple mains+masters are found
+- [ ] PUT requests
 - [ ] Write comprehensive README of supported options, methods, examples, etc
 
 
 ### FUTURE RELEASES
-- [ ] PUT requests
-- [ ] Master/slave detection during discovery, with correct selection 
+- [ ] Dynamic REST API based on `signalk-schema`, auto-generated tests for each path so client can be used to test-drive servers
 - [ ] Full react-native compatibility (current version mostly works)
 - [ ] Port codebase & tests to Typescript
-- [ ] Dynamic REST API based on `signalk-schema`
 - [ ] Multiple sources for a data point/"select" feature
 - [ ] History API support
+- [ ] Add an option to spawn a `WebWorker` for each `Connection`, offloading server comms to a different thread
 
 
 ### NOTES

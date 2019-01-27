@@ -151,7 +151,7 @@ export default class Connection extends EventEmitter {
         
         this._authenticated = true
         this._token = {
-          kind: (typeof result.type === 'string' && result.type.trim() !== '') ? result.type : 'JWT',
+          kind: (typeof result.type === 'string' && result.type.trim() !== '') ? result.type : 'Bearer',
           token: result.token
         }
 

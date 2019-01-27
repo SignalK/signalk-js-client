@@ -524,6 +524,7 @@ describe('Signal K SDK', () => {
     it('... Fails to get vessel in case of unauthenticated connection', done => {
       const client = new Client({
         hostname: 'hq.decipher.digital',
+        // hostname: 'localhost',
         port: 3000,
         useTLS: false,
         reconnect: false
@@ -549,6 +550,7 @@ describe('Signal K SDK', () => {
     it('... Successfully authenticates with correct username/password', done => {
       const client = new Client({
         hostname: 'hq.decipher.digital',
+        // hostname: 'localhost',
         port: 3000,
         useTLS: false,
         useAuthentication: true,
