@@ -113,22 +113,27 @@ client
 - [x] mDNS server discovery
 - [x] Security/authentication (REST) support
 - [x] Basic notifications/alarms support
-- [ ] Access Request mechanism (requesting)
-- [ ] Access Request mechanism (responding to requests, as a special case of notification)
-- [ ] Security/authentication (WS) support (relies on request/response)
-- [ ] Master/slave detection during discovery, with correct selection. Should emit an event if multiple mains+masters are found
-- [ ] PUT requests
+- [x] Access Request mechanism (responding to requests, as a special case of notification)
+- [x] Security/authentication (WS) support (relies on request/response)
+- [x] PUT requests via request/response over WS
+- [x] Access Request mechanism (basic requesting)
+- [ ] PUT requests via REST
 - [ ] Write comprehensive README of supported options, methods, examples, etc
 
 
 ### FUTURE RELEASES
+- [ ] Expand device access mechanism into its own EventEmitter, to automate the entire flow
+- [ ] Master/slave detection during discovery, with correct selection. Should emit an event if multiple mains+masters are found
 - [ ] Dynamic REST API based on `signalk-schema`, auto-generated tests for each path so client can be used to test-drive servers
-- [ ] Full react-native compatibility (current version mostly works)
-- [ ] Port codebase & tests to Typescript
+- [ ] Full react-native compatibility (current version mostly works due to WS issues on RN)
 - [ ] Multiple sources for a data point/"select" feature
 - [ ] History API support
+- [ ] Port codebase & tests to Typescript
 - [ ] Add an option to spawn a `WebWorker` for each `Connection`, offloading server comms to a different thread
 
 
 ### NOTES
+- (Note to self) Need to do PR for specification for access requests & make issue for node server & sdk to update
+- Node SK server responds with "Request updated" for access request responses. This is incorrect per spec
+- Node SK server paths for access requests repsponses are not correct to spec (i.e. no /signalk/v1 prefix)
 - Security is implemented, but the token type is currently hardcoded to `JWT` if no `token.type` is returned by a SK server. IMHO that default should be `Bearer`. See issue https://github.com/SignalK/signalk-server-node/issues/715 & PR https://github.com/SignalK/specification/pull/535

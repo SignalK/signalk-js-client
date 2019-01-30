@@ -24,11 +24,12 @@ export default class Connection extends EventEmitter {
     this.connected = false
     this.socket = null
     this.lastMessage = -1
+    this.isConnecting = false
+    
     this._authenticated = false
     this._retries = 0
     this._connection = null
     this._self = ''
-    this.isConnecting = false
 
     this.onWSMessage = this._onWSMessage.bind(this)
     this.onWSOpen = this._onWSOpen.bind(this)
@@ -164,6 +165,14 @@ export default class Connection extends EventEmitter {
       })
   }
 
+  setAuthenticated (token, kind = 'JWT') { // @FIXME default type should be Bearer
+    this._authenticated = true
+    this._token = {
+      kind,
+      token
+    }
+  }
+
   initiateSocket () {
     this.socket = new WebSocket(this.wsURI)
     this.socket.addEventListener('message', this.onWSMessage)
@@ -199,7 +208,7 @@ export default class Connection extends EventEmitter {
       this.connectionInfo = data
     }
 
-    this.emit('message', evt.data)
+    this.emit('message', data)
   }
 
   _onWSOpen () {
@@ -261,6 +270,7 @@ export default class Connection extends EventEmitter {
       return Promise.reject(e)
     }
 
+    debug(`Sending data to socket: ${data}`)
     this.socket.send(data)
   }
 
@@ -297,18 +307,35 @@ export default class Connection extends EventEmitter {
 
     let URI = `${this.httpURI}${path}`
 
+    // @TODO httpURI includes /api, which is not desirable. Need to refactor
     if (URI.includes('/api/auth/login')) {
       URI = URI.replace('/api/auth/login', '/auth/login')
+    }
+
+    // @TODO httpURI includes /api, which is not desirable. Need to refactor
+    if (URI.includes('/api/access/requests')) {
+      URI = URI.replace('/api/access/requests', '/access/requests')
+    }
+
+    // @FIXME weird hack because node server paths for access requests are not standardised
+    if (URI.includes('/signalk/v1/api/security')) {
+      URI = URI.replace('/signalk/v1/api/security', '/security')
     }
 
     debug(`[fetch] ${opts.method || 'GET'} ${URI} ${JSON.stringify(opts, null, 2)}`)
     return fetch(URI, opts)
       .then(response => {
-        if (response.ok) {
+        if (!response.ok) {
+          throw new Error(`Error fetching ${URI}: ${response.status} ${response.statusText}`)
+        }
+
+        const type = response.headers.get('content-type')
+
+        if (type.includes('application/json')) {
           return response.json()
         }
 
-        throw new Error(`Error fetching ${URI}: ${response.status} ${response.statusText}`)
+        return response.text()
       })
   }
 }

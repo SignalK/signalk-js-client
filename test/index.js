@@ -1,8 +1,277 @@
 import mdns from 'mdns'
-import Client, { Client as NamedClient } from '../src'
+import Client, { Client as NamedClient, PERMISSIONS_READONLY } from '../src'
 import { assert } from 'chai'
+import { v4 as uuid } from 'uuid'
+
+const isObject = (mixed, prop, propIsObject) => {
+  const _isObj = mixed && typeof mixed === 'object'
+
+  if (!_isObj) {
+    return false
+  }
+
+  if (typeof prop === 'string' && typeof propIsObject === 'boolean') {
+    const _propIsObj = mixed[prop] && typeof mixed[prop] === 'object'
+    return _isObj && mixed.hasOwnProperty(prop) && _propIsObj === propIsObject
+  }
+
+  if (typeof prop === 'string') {
+    return _isObj && mixed.hasOwnProperty(prop)
+  }
+
+  return _isObj
+}
 
 describe('Signal K SDK', () => {
+  // @TODO requesting access should be expanded into a small class to manage the entire flow (including polling)
+  describe('Device access requests', () => {
+    it('... successfully requests device access', done => {
+      const clientId = uuid()
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        useAuthentication: true,
+        username: 'sdk@decipher.industries',
+        password: 'signalk',
+        reconnect: false,
+        notifications: true
+      })
+
+      client.on('connect', () => {
+        client
+          .requestDeviceAccess('Top Secret Client', clientId)
+          .then(result => {
+            client.disconnect()
+            assert(
+              isObject(result, 'response', true) &&
+              result.response.hasOwnProperty('state') &&
+              result.response.hasOwnProperty('requestId') &&
+              result.response.hasOwnProperty('href')
+            )
+            done()
+          })
+          .catch(err => done(err))
+      })
+
+      client.connect()
+    }).timeout(30000)
+
+    it('... receives an access request sent by some device', done => {
+      const clientId = uuid()
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        useAuthentication: true,
+        username: 'sdk@decipher.industries',
+        password: 'signalk',
+        reconnect: false,
+        notifications: true
+      })
+
+      client.on('notification', notification => {
+        assert(notification.path.includes('security.accessRequest') && notification.path.includes(clientId))
+        client.disconnect()
+        done()
+      })
+
+      client.on('connect', () => {
+        client.requestDeviceAccess('Top Secret Client', clientId).catch(err => done(err))
+      })
+
+      client.connect()
+    }).timeout(30000)
+
+    it('... can respond to the access request notification sent by server', done => {
+      const clientId = uuid()
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        useAuthentication: true,
+        username: 'sdk@decipher.industries',
+        password: 'signalk',
+        reconnect: false,
+        notifications: true
+      })
+
+      client.on('notification', notification => {
+        if (notification.path.includes('security.accessRequest') && notification.path.includes(clientId)) {
+          client
+            .respondToAccessRequest(clientId, PERMISSIONS_READONLY)
+            .then(result => {
+              assert(String(result).toLowerCase().includes('request updated')) // @FIXME node server returns incorrect response type
+              done()
+            })
+            .catch(err => done(err))
+        }
+      })
+
+      client.on('connect', () => {
+        client.requestDeviceAccess('Top Secret Client', clientId).catch(err => done(err))
+      })
+
+      client.connect()
+    }).timeout(30000)
+  })
+
+  describe('On-demand authentication using request/response dynamics', () => {
+    it('... sends an authentication request with incorrect password, and receives the proper error code', done => {
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        reconnect: false,
+        notifications: false
+      })
+
+      client.on('connect', () => {
+        client.authenticate('sdk@decipher.industries', 'wrong!')
+        client.once('error', err => {
+          assert(err.message.includes('401'))
+          done()
+        })
+      })
+
+      client.connect()
+    }).timeout(15000)
+
+    it('... sends an authentication request and receives a well-formed response including token', done => {
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        reconnect: false,
+        notifications: false
+      })
+
+      client.on('connect', () => {
+        client.authenticate('sdk@decipher.industries', 'signalk')
+        client.once('authenticated', data => {
+          assert(data && typeof data === 'object' && data.hasOwnProperty('token'))
+          done()
+        })
+      })
+
+      client.connect()
+    }).timeout(15000)
+
+    it('... successfully authenticates, and then can access resources via the REST API', done => {
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        reconnect: false,
+        notifications: false
+      })
+
+      client.on('connect', () => {
+        client.authenticate('sdk@decipher.industries', 'signalk')
+        client.once('authenticated', data => {
+          client
+            .API()
+            .then(api => api.self())
+            .then(result => {
+              assert(result && typeof result === 'object')
+              done()
+            })
+            .catch(err => done(err))
+        })
+      })
+
+      client.connect()
+    }).timeout(15000)
+  })
+
+  describe('Request/response mechanics', () => {
+    it('... sends a request and receives a well-formed response', done => {
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        useAuthentication: true,
+        username: 'sdk@decipher.industries',
+        password: 'signalk',
+        reconnect: false,
+        notifications: false
+      })
+
+      client.on('connect', () => {
+        const request = client.request('PUT', {
+          put: {
+            path: 'electrical.switches.anchorLight.state',
+            value: 1
+          }
+        })
+
+        request.once('response', response => {
+          assert(
+            response &&
+            typeof response === 'object' &&
+            response.hasOwnProperty('requestId') &&
+            response.hasOwnProperty('state') &&
+            response.hasOwnProperty('statusCode') &&
+            (response.state === 'PENDING' || response.state === 'COMPLETED') &&
+            response.requestId === request.getRequestId()
+          )
+          done()
+        })
+
+        request.send()
+      })
+
+      client.connect()
+    }).timeout(15000)
+
+    it('... sends a query for a request and receives a well-formed response', done => {
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        reconnect: false,
+        notifications: false
+      })
+
+      let received = 0
+
+      client.on('connect', () => {
+        const request = client.request('LOGIN', {
+          login: {
+            username: 'sdk@decipher.industries',
+            password: 'signalk'
+          }
+        })
+
+        request.on('response', response => {
+          received += 1
+
+          if (received === 1) {
+            // Send query after initial response...
+            request.query()
+          }
+
+          if (received > 1) {
+            assert(
+              response &&
+              typeof response === 'object' &&
+              response.hasOwnProperty('requestId') &&
+              response.hasOwnProperty('state') &&
+              response.hasOwnProperty('statusCode') &&
+              (response.state === 'PENDING' || response.state === 'COMPLETED') &&
+              response.requestId === request.getRequestId()
+            )
+            done()
+          }
+        })
+
+        request.send()
+      })
+
+      client.connect()
+    }).timeout(15000)
+  })
+
   describe.skip('mDNS server discovery', () => {
     it('... Emits an event when a Signal K host is found', done => {
       const client = new Client({
@@ -555,8 +824,8 @@ describe('Signal K SDK', () => {
 
     it('... Fails to get vessel in case of unauthenticated connection', done => {
       const client = new Client({
+        // hostname: 'hq.decipher.digital',
         hostname: 'hq.decipher.digital',
-        // hostname: 'localhost',
         port: 3000,
         useTLS: false,
         reconnect: false,
@@ -582,8 +851,8 @@ describe('Signal K SDK', () => {
     
     it('... Successfully authenticates with correct username/password', done => {
       const client = new Client({
+        // hostname: 'hq.decipher.digital',
         hostname: 'hq.decipher.digital',
-        // hostname: 'localhost',
         port: 3000,
         useTLS: false,
         useAuthentication: true,
@@ -617,7 +886,7 @@ describe('Signal K SDK', () => {
 
     it('... successfully instantiates a Client with default options', done => {
       const client = new Client()
-      assert(client.options.hostname === 'localhost')
+      assert(client.options.hostname === 'hq.decipher.digital')
       assert(client.options.port === 3000)
       assert(client.options.useTLS === true)
       assert(client.options.version === 'v1')

@@ -11,13 +11,21 @@ import Promise from 'bluebird'
 import EventEmitter from 'eventemitter3'
 import Connection from './connection'
 import Subscription from './subscription'
+import Request from './request'
 import API from './api'
 import Debug from 'debug'
+import { v4 as uuid } from 'uuid'
 
 const debug = Debug('signalk-js-sdk/Client')
 
 export const SUBSCRIPTION_NAME = 'default'
 export const NOTIFICATIONS_SUBSCRIPTION = '__NOTIFICATIONS__'
+export const AUTHENTICATION_REQUEST = '__AUTHENTICATION_REQUEST__'
+
+// Permissions for access requests
+export const PERMISSIONS_READWRITE = 'readwrite'
+export const PERMISSIONS_READONLY = 'readonly'
+export const PERMISSIONS_DENY = 'denied'
 
 export default class Client extends EventEmitter {
   constructor (options = {}) {
@@ -43,6 +51,7 @@ export default class Client extends EventEmitter {
     this.subscriptions = {}
     this.services = []
     this.notifications = {}
+    this.requests = {}
 
     if (this.options.autoConnect === true) {
       this.connect().catch(err => this.emit('error', err))
@@ -56,6 +65,74 @@ export default class Client extends EventEmitter {
 
   get (key) {
     return this.options[key] || null
+  }
+
+  // @TODO requesting access should be expanded into a small class to manage the entire flow (including polling)
+  requestDeviceAccess (description, _clientId) {
+    const clientId = typeof _clientId === 'string' ? _clientId : uuid()
+    return this
+      .connection
+      .fetch('/access/requests', {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId,
+          description
+        })
+      })
+      .then(response => {
+        return {
+          clientId,
+          response
+        }
+      })
+  }
+
+  respondToAccessRequest (uuid, permissions, expiration = '1y') {
+    return this.connection
+      .fetch(`/security/access/requests/${uuid}/${permissions === 'denied' ? 'denied' : 'approved'}`, {
+        method: 'PUT',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          expiration,
+          permissions
+        })
+      })
+  }
+
+  authenticate (username, password) {
+    const request = this.request(AUTHENTICATION_REQUEST, {
+      login: {
+        username,
+        password
+      }
+    })
+
+    request.on('response', response => {
+      if (response.statusCode === 200 && response.hasOwnProperty('login') && typeof response.login === 'object' && response.login.hasOwnProperty('token')) {
+        this.connection.setAuthenticated(response.login.token)
+        
+        // We are now authenticated
+        return this.emit('authenticated', {
+          token: response.login.token
+        })
+      }
+
+      this.emit('error', new Error(`Error authenticating: status ${response.statusCode}`))
+    })
+
+    request.send()
+  }
+
+  request (name, body = {}) {
+    if (!this.requests.hasOwnProperty(name)) {
+      this.requests[name] = new Request(this.connection, name, body)
+      debug(`Registered request "${name}" with ID ${this.requests[name].getRequestId()}`)
+    }
+
+    return this.requests[name]
   }
 
   discover () {
@@ -271,7 +348,7 @@ export default class Client extends EventEmitter {
         })
       })
       .catch(err => {
-        console.log(`[subscribeToNotifications] error getting initial notifications: ${err.message}`)
+        debug(`[subscribeToNotifications] error getting initial notifications: ${err.message}`)
       })
 
     this.subscriptions[NOTIFICATIONS_SUBSCRIPTION] = new Subscription(this.connection, this.api, options, NOTIFICATIONS_SUBSCRIPTION)
