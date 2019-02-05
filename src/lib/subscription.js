@@ -2,9 +2,9 @@
  * @description   A Subscription provides an observable API that a client can use
  *                to listen to all or certain deltas on a Signal K server.
  * @author        Fabian Tollenaar <fabian@decipher.industries>
- * @copyright     2018, Fabian Tollenaar. All rights reserved.
+ * @copyright     2018-2019, Fabian Tollenaar. All rights reserved.
  * @license       Apache-2.0
- * @module        signalk-js-client
+ * @module        @signalk/signalk-js-sdk
  */
 
 import EventEmitter from 'eventemitter3'

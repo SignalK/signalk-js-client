@@ -2,9 +2,9 @@
  * @description   A Connection represents a single connection to a Signal K server.
  *                It manages both the HTTP connection (REST API) and the WS connection.
  * @author        Fabian Tollenaar <fabian@decipher.industries>
- * @copyright     2018, Fabian Tollenaar. All rights reserved.
+ * @copyright     2018-2019, Fabian Tollenaar. All rights reserved.
  * @license       Apache-2.0
- * @module        signalk-js-client
+ * @module        @signalk/signalk-js-sdk
  */
 
 import EventEmitter from 'eventemitter3'
@@ -26,6 +26,7 @@ export default class Connection extends EventEmitter {
     this.lastMessage = -1
     this.isConnecting = false
     
+    this._bearerTokenPrefix = this.options.bearerTokenPrefix || 'Bearer'
     this._authenticated = false
     this._retries = 0
     this._connection = null
@@ -149,10 +150,10 @@ export default class Connection extends EventEmitter {
         }
 
         debug(`[reconnect] successful auth request: ${JSON.stringify(result, null, 2)}`)
-        
+     
         this._authenticated = true
         this._token = {
-          kind: (typeof result.type === 'string' && result.type.trim() !== '') ? result.type : 'Bearer',
+          kind: (typeof result.type === 'string' && result.type.trim() !== '') ? result.type : this._bearerTokenPrefix,
           token: result.token
         }
 
@@ -275,7 +276,6 @@ export default class Connection extends EventEmitter {
   }
 
   fetch (path, opts) {
-    // @TODO for now this is just a simple proxy. Enrich opts.headers with security data when implemented.
     if (path.charAt(0) !== '/') {
       path = `/${path}`
     }

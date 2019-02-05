@@ -1,9 +1,9 @@
 /**
  * @description   An API wraps the REST API for a Signal K server
  * @author        Fabian Tollenaar <fabian@decipher.industries>
- * @copyright     2018, Fabian Tollenaar. All rights reserved.
+ * @copyright     2018-2019, Fabian Tollenaar. All rights reserved.
  * @license       Apache-2.0
- * @module        signalk-js-client
+ * @module        @signalk/signalk-js-sdk
  */
 
 export default class API {
@@ -26,6 +26,26 @@ export default class API {
     }
 
     return this.connection.fetch(path)
+  }
+
+  put (path, body) {
+    if (path.includes('.')) {
+      path = path.replace(/\./g, '/')
+    }
+
+    if (typeof path !== 'string' || path.trim() === '') {
+      path = '/'
+    }
+
+    if (path.charAt(0) !== '/') {
+      path = `/${path}`
+    }
+    
+    return this.connection.fetch(path, {
+      method: 'PUT',
+      mode: 'cors',
+      body: (body && typeof body === 'object') ? JSON.stringify(body) : body
+    })
   }
 
   /**

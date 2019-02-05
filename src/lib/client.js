@@ -2,9 +2,9 @@
  * @description   Client implements functionality to discover, connect to,
  *                retrieve data and receive data from a Signal K server.
  * @author        Fabian Tollenaar <fabian@decipher.industries>
- * @copyright     2018, Fabian Tollenaar. All rights reserved.
+ * @copyright     2018-2019, Fabian Tollenaar. All rights reserved.
  * @license       Apache-2.0
- * @module        signalk-js-client
+ * @module        @signalk/signalk-js-sdk
  */
 
 import Promise from 'bluebird'
@@ -133,26 +133,6 @@ export default class Client extends EventEmitter {
     }
 
     return this.requests[name]
-  }
-
-  discover () {
-    if (this.options.mdns === null) {
-      return
-    }
-
-    const browser = this.options.mdns.browseThemAll()
-
-    browser.on('serviceUp', service => {
-      if (!service || typeof service !== 'object') {
-        return
-      }
-
-      if (service.type.name.includes('signalk-ws')) {
-        this.emit('foundHost', service)
-      }
-    })
-
-    browser.start()
   }
 
   connect () {
@@ -290,44 +270,12 @@ export default class Client extends EventEmitter {
   }
 
   subscribeToNotifications () {
-    if (this.subscriptions.hasOwnProperty(NOTIFICATIONS_SUBSCRIPTION)) {
-      return Promise.resolve(this.subscriptions[NOTIFICATIONS_SUBSCRIPTION])
-    }
-
     if (this.connection === null) {
       return Promise.reject(new Error('There are no available connections. Please connect before subscribe.'))
     }
 
     if (this.api === null) {
       this.api = new API(this.connection)
-    }
-
-    const options = {
-      context: 'vessels.self',
-      subscribe: [{
-        path: 'notifications.*',
-        policy: 'instant'
-      }]
-    }
-
-    const flattenTree = (tree) => {
-      const flattened = {}
-      let cursor = tree
-      let currentPath = ''
-
-      const evaluateLeaf = (key) => {
-        currentPath += `${currentPath === '' ? '' : '.'}${key}`
-        cursor = cursor[key]
-
-        if (cursor && typeof cursor === 'object' && cursor.hasOwnProperty('value')) {
-          flattened[currentPath] = Object.assign({}, cursor.value)
-        } else {
-          Object.keys(cursor).forEach(evaluateLeaf)
-        }
-      }
-
-      Object.keys(cursor).forEach(key => evaluateLeaf(key))
-      return flattened
     }
 
     this.api
@@ -350,6 +298,18 @@ export default class Client extends EventEmitter {
       .catch(err => {
         debug(`[subscribeToNotifications] error getting initial notifications: ${err.message}`)
       })
+
+    if (this.subscriptions.hasOwnProperty(NOTIFICATIONS_SUBSCRIPTION)) {
+      return Promise.resolve(this.subscriptions[NOTIFICATIONS_SUBSCRIPTION])
+    }
+
+    const options = {
+      context: 'vessels.self',
+      subscribe: [{
+        path: 'notifications.*',
+        policy: 'instant'
+      }]
+    }
 
     this.subscriptions[NOTIFICATIONS_SUBSCRIPTION] = new Subscription(this.connection, this.api, options, NOTIFICATIONS_SUBSCRIPTION)
     this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].on('unsubscribe', () => this.emit('unsubscribe'))
@@ -401,4 +361,28 @@ export default class Client extends EventEmitter {
 
     return this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].subscribe()
   }
+}
+
+const flattenTree = (tree) => {
+  const flattened = {}
+  let cursor = tree
+  let currentPath = ''
+
+  const evaluateLeaf = (key) => {
+    currentPath += `${currentPath === '' ? '' : '.'}${key}`
+    cursor = cursor[key]
+
+    if (!cursor || typeof cursor !== 'object') {
+      return
+    }
+
+    if (cursor && typeof cursor === 'object' && cursor.hasOwnProperty('value')) {
+      flattened[currentPath] = Object.assign({}, cursor.value)
+    } else {
+      Object.keys(cursor).forEach(evaluateLeaf)
+    }
+  }
+
+  Object.keys(cursor).forEach(key => evaluateLeaf(key))
+  return flattened
 }

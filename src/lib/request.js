@@ -2,9 +2,9 @@
  * @description   A Request represents an asynchronous request to a Signal K server.
  *                This class manages a single request and it's responses.
  * @author        Fabian Tollenaar <fabian@decipher.industries>
- * @copyright     2019, Fabian Tollenaar. All rights reserved.
+ * @copyright     2018-2019, Fabian Tollenaar. All rights reserved.
  * @license       Apache-2.0
- * @module        signalk-js-client
+ * @module        @signalk/signalk-js-sdk
  */
 
 import EventEmitter from 'eventemitter3'

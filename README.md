@@ -12,7 +12,7 @@ This is not yet published on Github. If you'd like to use an early version, use 
 
 ### BASIC USAGE
 ```javascript
-import Client from '@signalk/signalk-js-sdk'
+import Client, { Discovery } from '@signalk/signalk-js-sdk'
 import mdns from 'mdns'
 
 let client = null
@@ -39,10 +39,24 @@ client = new Client({
 })
 
 // Discover client using mDNS
-client = new Client({
-  mdns,
-  reconnect: true,
-  autoConnect: false
+// Params: mdns lib, search time
+const discovery = new Discovery(mdns, 60000)
+
+// Timeout fires when search time is up and no servers were found
+discovery.on('timeout', () => console.log('No SK servers found'))
+
+// Found fires when a SK server was found
+discovery.on('found', server => {
+  if (server.isMain() && server.isMaster()) {
+    client = server.createClient({
+      useTLS: false,
+      useAuthentication: true,
+      reconnect: true,
+      autoConnect: true,
+      username: 'sdk@decipher.industries',
+      password: 'signalk'
+    })
+  }
 })
 
 // Subscribe to specific paths over WS
@@ -117,7 +131,8 @@ client
 - [x] Security/authentication (WS) support (relies on request/response)
 - [x] PUT requests via request/response over WS
 - [x] Access Request mechanism (basic requesting)
-- [ ] PUT requests via REST
+- [x] PUT requests via REST
+- [x] Move mDNS stack into a separate class
 - [ ] Write comprehensive README of supported options, methods, examples, etc
 
 
@@ -134,6 +149,8 @@ client
 
 ### NOTES
 - (Note to self) Need to do PR for specification for access requests & make issue for node server & sdk to update
+- mDNS advert should advertise wether server supports TLS (?)
+- `PUT requests via REST` have been implemented, but don't have a valid test yet. Need to figure out how to test this
 - Node SK server responds with "Request updated" for access request responses. This is incorrect per spec
 - Node SK server paths for access requests repsponses are not correct to spec (i.e. no /signalk/v1 prefix)
-- Security is implemented, but the token type is currently hardcoded to `JWT` if no `token.type` is returned by a SK server. IMHO that default should be `Bearer`. See issue https://github.com/SignalK/signalk-server-node/issues/715 & PR https://github.com/SignalK/specification/pull/535
+- ~~Security is implemented, but the token type is currently hardcoded to `JWT` if no `token.type` is returned by a SK server. IMHO that default should be `Bearer`. See issue https://github.com/SignalK/signalk-server-node/issues/715 & PR https://github.com/SignalK/specification/pull/535~~
