@@ -24,6 +24,14 @@
     "babel-preset-env": "^1.6.0",
     "babel-register": "^6.24.1"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SignalK/signalk-js-client"
+  },
+  "homepage": "https://github.com/SignalK/signalk-js-client",
+  "bugs": {
+    "url": "https://github.com/SignalK/signalk-js-client/issues"
+  },
   "standard": {
     "globals": [
       "describe",
