@@ -1,13 +1,13 @@
 # Signal K JS SDK
 
-> A Javascript SDK for Signal K servers. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s).
+> A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s).
 
 
 ### INSTALLATION
 This is not yet published on Github. If you'd like to use an early version, use the following command to install the SDK in your project:
 
 ```bash
-[sudo] npm install --save fabdrol/signalk-js-client
+[sudo] npm install --save @signalk/client
 ```
 
 ### BASIC USAGE
@@ -122,6 +122,12 @@ client
 
 // ... check out the tests for more REST API examples
 ```
+
+### Other Signal K Clients:
+**Angular:**
+Signal K client for the Angular framework
+[signalk-client-angular](https://github.com/panaaj/signalk-client-angular)
+
 
 ### PRE-1.0 RELEASE CHECKLIST
 - [x] mDNS server discovery
