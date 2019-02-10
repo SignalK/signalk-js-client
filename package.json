@@ -1,7 +1,7 @@
 {
-  "name": "@signalk/signalk-js-sdk",
-  "version": "1.0.0",
-  "description": "A Javascript SDK for Signal K servers. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s)",
+  "name": "@signalk/client",
+  "version": "2.0.0",
+  "description": "A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s)",
   "main": "index.js",
   "scripts": {
     "test": "mocha --compilers js:babel-register",
@@ -11,14 +11,18 @@
     "postinstall": "./node_modules/.bin/babel src -d dist",
     "push": "npm publish --access public --scope @signalk ."
   },
-  "keywords": [],
+  "keywords": ["signal k", "js", "javascript", "ecmascript", "client", "sdk"],
   "author": "Fabian Tollenaar <fabian@decipher.industries> (http://signalk.org)",
   "license": "Apache-2.0",
   "devDependencies": {
     "casper-chai": "^0.3.0",
     "chai": "^4.1.0",
     "mdns": "^2.3.4",
-    "mocha": "^3.4.2"
+    "mocha": "^3.4.2",
+    "babel-cli": "^6.24.1",
+    "babel-plugin-transform-object-rest-spread": "^6.23.0",
+    "babel-preset-env": "^1.6.0",
+    "babel-register": "^6.24.1"
   },
   "standard": {
     "globals": [
@@ -32,18 +36,11 @@
     ]
   },
   "dependencies": {
-    "babel-cli": "^6.24.1",
-    "babel-plugin-transform-object-rest-spread": "^6.23.0",
-    "babel-preset-env": "^1.6.0",
-    "babel-register": "^6.24.1",
-    "bluebird": "^3.5.1",
     "cross-fetch": "^2.1.1",
     "debug": "^4.1.1",
     "eventemitter3": "^3.0.1",
     "isomorphic-ws": "^4.0.0",
-    "moment": "^2.20.1",
-    "reconnectingwebsocket": "^1.0.0",
     "uuid": "^3.3.2",
-    "ws": "^5.0.0"
+    "ws": "^6.1.3"
   }
 }

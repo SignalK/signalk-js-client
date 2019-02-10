@@ -7,7 +7,6 @@
  * @module        @signalk/signalk-js-sdk
  */
 
-import Promise from 'bluebird'
 import EventEmitter from 'eventemitter3'
 import Connection from './connection'
 import Subscription from './subscription'
