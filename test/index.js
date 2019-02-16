@@ -14,6 +14,8 @@ import Client, {
 } from '../src'
 import { assert } from 'chai'
 import { v4 as uuid } from 'uuid'
+import Server from 'signalk-server'
+import freeport from 'freeport-promise'
 
 const isObject = (mixed, prop, propIsObject) => {
   const _isObj = mixed && typeof mixed === 'object'
@@ -34,17 +36,58 @@ const isObject = (mixed, prop, propIsObject) => {
   return _isObj
 }
 
-const TEST_SERVER_HOSTNAME =
-  isObject(process, 'env', true) &&
-  isObject(process.env, 'TEST_SERVER_HOSTNAME')
-    ? process.env.TEST_SERVER_HOSTNAME
-    : 'hq.decipher.digital'
-const TEST_SERVER_PORT =
-  isObject(process, 'env', true) && isObject(process.env, 'TEST_SERVER_PORT')
-    ? process.env.TEST_SERVER_PORT
-    : 3000
+const USER = 'sdk'
+const PASSWORD = 'signalk'
+
+const securityConfig = {
+  allow_readonly: false,
+  expiration: '1d',
+  secretKey:
+    '3c2eddf95ece9080518eb777b26c0fa6285f107cccb5ff9d5bdd7776eeb82c8afaf0dffa7d9312936882351ec6b1d5535203b4a2b806ab130cdbcd917f46f2a69e7ff4548ca3644c97a98185284041de46518cdb026f85430532fa4482882e4cfd08cc0256dca88d0ca2577b91d6a435a832e6c600b2db13f794d087e5e3a181d9566c1e61a14f984dbc643a7f6ab6a60cafafff34c93475d442475136cf7f0bfb62c59b050a9be572bc26993c46ef05fa748dc8395277eaa07519d79a7bc12502a2429b2f89b78796f6dcf3f474a5c5e276ecbb59dcdceaa8df8f1b1f98ec23a4c36cc1334e07e06a8c8cd6671fee599e578d24aabd187d1a2903ae6facb090',
+  users: [
+    {
+      username: 'sdk',
+      type: 'admin',
+      password: '$2a$10$JyzSM5PMD3PCyivdtSN61OfwmjfgdISVtJ1l5KIC8/R1sUHPseMU2'
+    }
+  ],
+  devices: [],
+  immutableConfig: false,
+  acls: [],
+  allowDeviceAccessRequests: true,
+  allowNewUserRegistration: true
+}
+
+let TEST_SERVER_HOSTNAME = process.env.TEST_SERVER_HOSTNAME
+let TEST_SERVER_PORT = process.env.TEST_SERVER_PORT || 80
 
 describe('Signal K SDK', () => {
+  before(done => {
+    if (TEST_SERVER_HOSTNAME) {
+      done()
+    } else {
+      TEST_SERVER_HOSTNAME = 'localhost'
+      freeport().then(port => {
+        TEST_SERVER_PORT = port
+        const serverApp = new Server({
+          config: {
+            settings: {
+              port,
+              interfaces: {
+                plugins: false
+              },
+              security: {
+                strategy: './tokensecurity'
+              }
+            }
+          },
+          securityConfig: securityConfig
+        })
+        serverApp.start().then(() => done())
+      })
+    }
+  })
+
   // @TODO requesting access should be expanded into a small class to manage the entire flow (including polling)
   describe('Device access requests', () => {
     it('... successfully requests device access', done => {
@@ -54,8 +97,8 @@ describe('Signal K SDK', () => {
         port: TEST_SERVER_PORT,
         useTLS: false,
         useAuthentication: true,
-        username: 'sdk@decipher.industries',
-        password: 'signalk',
+        username: USER,
+        password: PASSWORD,
         reconnect: false,
         notifications: true,
         bearerTokenPrefix: 'JWT'
@@ -88,7 +131,7 @@ describe('Signal K SDK', () => {
         port: TEST_SERVER_PORT,
         useTLS: false,
         useAuthentication: true,
-        username: 'sdk@decipher.industries',
+        username: USER,
         password: 'signalk',
         reconnect: false,
         notifications: true,
@@ -124,7 +167,7 @@ describe('Signal K SDK', () => {
         port: TEST_SERVER_PORT,
         useTLS: false,
         useAuthentication: true,
-        username: 'sdk@decipher.industries',
+        username: USER,
         password: 'signalk',
         reconnect: false,
         notifications: true,
@@ -174,7 +217,7 @@ describe('Signal K SDK', () => {
       })
 
       client.on('connect', () => {
-        client.authenticate('sdk@decipher.industries', 'wrong!')
+        client.authenticate(USER, 'wrong!')
         client.once('error', err => {
           assert(err.message.includes('401'))
           done()
@@ -195,7 +238,7 @@ describe('Signal K SDK', () => {
       })
 
       client.on('connect', () => {
-        client.authenticate('sdk@decipher.industries', 'signalk')
+        client.authenticate(USER, 'signalk')
         client.once('authenticated', data => {
           assert(
             data && typeof data === 'object' && data.hasOwnProperty('token')
@@ -218,7 +261,7 @@ describe('Signal K SDK', () => {
       })
 
       client.on('connect', () => {
-        client.authenticate('sdk@decipher.industries', 'signalk')
+        client.authenticate(USER, 'signalk')
         client.once('authenticated', data => {
           client
             .API()
@@ -242,7 +285,7 @@ describe('Signal K SDK', () => {
         port: TEST_SERVER_PORT,
         useTLS: false,
         useAuthentication: true,
-        username: 'sdk@decipher.industries',
+        username: USER,
         password: 'signalk',
         reconnect: false,
         notifications: false,
@@ -294,7 +337,7 @@ describe('Signal K SDK', () => {
       client.on('connect', () => {
         const request = client.request('LOGIN', {
           login: {
-            username: 'sdk@decipher.industries',
+            username: USER,
             password: 'signalk'
           }
         })
@@ -474,7 +517,7 @@ describe('Signal K SDK', () => {
         autoConnect: false,
         notifications: true,
         useAuthentication: true,
-        username: 'sdk@decipher.industries',
+        username: USER,
         password: 'signalk',
         bearerTokenPrefix: 'JWT'
       })
@@ -493,17 +536,21 @@ describe('Signal K SDK', () => {
   })
 
   describe('REST API', () => {
-    const client = new Client({
-      hostname: TEST_SERVER_HOSTNAME,
-      port: TEST_SERVER_PORT,
-      useAuthentication: true,
-      username: 'sdk@decipher.industries',
-      password: 'signalk',
-      useTLS: false,
-      reconnect: false,
-      autoConnect: true,
-      notifications: false,
-      bearerTokenPrefix: 'JWT'
+    let client
+
+    before(() => {
+      client = new Client({
+        hostname: TEST_SERVER_HOSTNAME,
+        port: TEST_SERVER_PORT,
+        useAuthentication: true,
+        username: USER,
+        password: 'signalk',
+        useTLS: false,
+        reconnect: false,
+        autoConnect: true,
+        notifications: false,
+        bearerTokenPrefix: 'JWT'
+      })
     })
 
     const groups = [
@@ -992,7 +1039,7 @@ describe('Signal K SDK', () => {
         port: TEST_SERVER_PORT,
         useTLS: false,
         useAuthentication: true,
-        username: 'sdk@decipher.industries',
+        username: USER,
         password: 'signalk',
         reconnect: false,
         notifications: false,
