@@ -11,18 +11,25 @@
     "postinstall": "./node_modules/.bin/babel src -d dist",
     "push": "npm publish --access public --scope @signalk ."
   },
-  "keywords": ["signal k", "js", "javascript", "ecmascript", "client", "sdk"],
+  "keywords": [
+    "signal k",
+    "js",
+    "javascript",
+    "ecmascript",
+    "client",
+    "sdk"
+  ],
   "author": "Fabian Tollenaar <fabian@decipher.industries> (http://signalk.org)",
   "license": "Apache-2.0",
   "devDependencies": {
-    "casper-chai": "^0.3.0",
-    "chai": "^4.1.0",
-    "mdns": "^2.3.4",
-    "mocha": "^3.4.2",
     "babel-cli": "^6.24.1",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "babel-preset-env": "^1.6.0",
-    "babel-register": "^6.24.1"
+    "babel-register": "^6.24.1",
+    "casper-chai": "^0.3.0",
+    "chai": "^4.1.0",
+    "mdns": "^2.3.4",
+    "mocha": "^3.4.2"
   },
   "repository": {
     "type": "git",

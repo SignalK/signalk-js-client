@@ -7,7 +7,11 @@
  */
 
 import mdns from 'mdns'
-import Client, { Discovery, Client as NamedClient, PERMISSIONS_READONLY } from '../src'
+import Client, {
+  Discovery,
+  Client as NamedClient,
+  PERMISSIONS_READONLY
+} from '../src'
 import { assert } from 'chai'
 import { v4 as uuid } from 'uuid'
 
@@ -30,8 +34,15 @@ const isObject = (mixed, prop, propIsObject) => {
   return _isObj
 }
 
-const TEST_SERVER_HOSTNAME = (isObject(process, 'env', true) && isObject(process.env, 'TEST_SERVER_HOSTNAME')) ? process.env.TEST_SERVER_HOSTNAME : 'hq.decipher.digital'
-const TEST_SERVER_PORT = (isObject(process, 'env', true) && isObject(process.env, 'TEST_SERVER_PORT')) ? process.env.TEST_SERVER_PORT : 3000
+const TEST_SERVER_HOSTNAME =
+  isObject(process, 'env', true) &&
+  isObject(process.env, 'TEST_SERVER_HOSTNAME')
+    ? process.env.TEST_SERVER_HOSTNAME
+    : 'hq.decipher.digital'
+const TEST_SERVER_PORT =
+  isObject(process, 'env', true) && isObject(process.env, 'TEST_SERVER_PORT')
+    ? process.env.TEST_SERVER_PORT
+    : 3000
 
 describe('Signal K SDK', () => {
   // @TODO requesting access should be expanded into a small class to manage the entire flow (including polling)
@@ -57,9 +68,9 @@ describe('Signal K SDK', () => {
             client.disconnect()
             assert(
               isObject(result, 'response', true) &&
-              result.response.hasOwnProperty('state') &&
-              result.response.hasOwnProperty('requestId') &&
-              result.response.hasOwnProperty('href')
+                result.response.hasOwnProperty('state') &&
+                result.response.hasOwnProperty('requestId') &&
+                result.response.hasOwnProperty('href')
             )
             done()
           })
@@ -87,14 +98,19 @@ describe('Signal K SDK', () => {
       client.on('notification', notification => {
         if (isDone === false) {
           isDone = true
-          assert(notification.path.includes('security.accessRequest') && notification.path.includes(clientId))
+          assert(
+            notification.path.includes('security.accessRequest') &&
+              notification.path.includes(clientId)
+          )
           client.disconnect()
           done()
         }
       })
 
       client.on('connect', () => {
-        client.requestDeviceAccess('Top Secret Client', clientId).catch(err => done(err))
+        client
+          .requestDeviceAccess('Top Secret Client', clientId)
+          .catch(err => done(err))
       })
 
       client.connect()
@@ -116,12 +132,20 @@ describe('Signal K SDK', () => {
       })
 
       client.on('notification', notification => {
-        if (sent === false && notification.path.includes('security.accessRequest') && notification.path.includes(clientId)) {
+        if (
+          sent === false &&
+          notification.path.includes('security.accessRequest') &&
+          notification.path.includes(clientId)
+        ) {
           sent = true
           client
             .respondToAccessRequest(clientId, PERMISSIONS_READONLY)
             .then(result => {
-              assert(String(result).toLowerCase().includes('request updated')) // @FIXME node server returns incorrect response type
+              assert(
+                String(result)
+                  .toLowerCase()
+                  .includes('request updated')
+              ) // @FIXME node server returns incorrect response type
               done()
             })
             .catch(err => done(err))
@@ -129,7 +153,9 @@ describe('Signal K SDK', () => {
       })
 
       client.on('connect', () => {
-        client.requestDeviceAccess('Top Secret Client', clientId).catch(err => done(err))
+        client
+          .requestDeviceAccess('Top Secret Client', clientId)
+          .catch(err => done(err))
       })
 
       client.connect()
@@ -171,7 +197,9 @@ describe('Signal K SDK', () => {
       client.on('connect', () => {
         client.authenticate('sdk@decipher.industries', 'signalk')
         client.once('authenticated', data => {
-          assert(data && typeof data === 'object' && data.hasOwnProperty('token'))
+          assert(
+            data && typeof data === 'object' && data.hasOwnProperty('token')
+          )
           done()
         })
       })
@@ -232,12 +260,13 @@ describe('Signal K SDK', () => {
         request.once('response', response => {
           assert(
             response &&
-            typeof response === 'object' &&
-            response.hasOwnProperty('requestId') &&
-            response.hasOwnProperty('state') &&
-            response.hasOwnProperty('statusCode') &&
-            (response.state === 'PENDING' || response.state === 'COMPLETED') &&
-            response.requestId === request.getRequestId()
+              typeof response === 'object' &&
+              response.hasOwnProperty('requestId') &&
+              response.hasOwnProperty('state') &&
+              response.hasOwnProperty('statusCode') &&
+              (response.state === 'PENDING' ||
+                response.state === 'COMPLETED') &&
+              response.requestId === request.getRequestId()
           )
           done()
         })
@@ -308,11 +337,12 @@ describe('Signal K SDK', () => {
       discovery.once('found', server => {
         found += 1
         assert(
-          (typeof server.hostname === 'string' && server.hostname !== '') &&
-          (typeof server.port === 'number') &&
-          (typeof server.createClient === 'function') &&
-          Array.isArray(server.roles) &&
-          (server.createClient() instanceof Client)
+          typeof server.hostname === 'string' &&
+            server.hostname !== '' &&
+            typeof server.port === 'number' &&
+            typeof server.createClient === 'function' &&
+            Array.isArray(server.roles) &&
+            server.createClient() instanceof Client
         )
         done()
       })
@@ -344,7 +374,9 @@ describe('Signal K SDK', () => {
       let isDone = false
 
       client.on('delta', data => {
-        assert(data && typeof data === 'object' && data.hasOwnProperty('updates'))
+        assert(
+          data && typeof data === 'object' && data.hasOwnProperty('updates')
+        )
         if (isDone === false) {
           done()
           isDone = true
@@ -372,7 +404,9 @@ describe('Signal K SDK', () => {
       let isDone = false
 
       client.on('delta', data => {
-        assert(data && typeof data === 'object' && data.hasOwnProperty('updates'))
+        assert(
+          data && typeof data === 'object' && data.hasOwnProperty('updates')
+        )
         if (isDone === false) {
           done()
           isDone = true
@@ -444,9 +478,13 @@ describe('Signal K SDK', () => {
         password: 'signalk',
         bearerTokenPrefix: 'JWT'
       })
-      
+
       client.once('notification', notification => {
-        assert(notification && typeof notification === 'object' && notification.hasOwnProperty('path'))
+        assert(
+          notification &&
+            typeof notification === 'object' &&
+            notification.hasOwnProperty('path')
+        )
         done()
       })
 
@@ -469,10 +507,18 @@ describe('Signal K SDK', () => {
     })
 
     const groups = [
-      'communication', 'design', 'electrical',
-      'environment', 'navigation', 'notifications',
-      'performance', 'propulsion', 'sails', 'sensors',
-      'steering', 'tanks'
+      'communication',
+      'design',
+      'electrical',
+      'environment',
+      'navigation',
+      'notifications',
+      'performance',
+      'propulsion',
+      'sails',
+      'sensors',
+      'steering',
+      'tanks'
     ]
 
     groups.forEach(group => {
@@ -894,7 +940,10 @@ describe('Signal K SDK', () => {
       })
 
       client.on('self', self => {
-        assert(self === 'vessels.urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d')
+        assert(
+          self ===
+            'vessels.urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d'
+        )
         done()
       })
 
@@ -916,18 +965,27 @@ describe('Signal K SDK', () => {
           .API()
           .then(api => api.self())
           .then(result => {
-            assert(result && typeof result === 'object' && result.hasOwnProperty('uuid'))
-            done(new Error('Got data when we shouldn\'t be authenticated'))
+            assert(
+              result &&
+                typeof result === 'object' &&
+                result.hasOwnProperty('uuid')
+            )
+            done(new Error("Got data when we shouldn't be authenticated"))
           })
           .catch(err => {
-            assert(err && typeof err === 'object' && typeof err.message === 'string' && err.message.includes('401'))
+            assert(
+              err &&
+                typeof err === 'object' &&
+                typeof err.message === 'string' &&
+                err.message.includes('401')
+            )
             done()
           })
       })
 
       client.connect()
     }).timeout(15000)
-    
+
     it('... Successfully authenticates with correct username/password', done => {
       const client = new Client({
         hostname: TEST_SERVER_HOSTNAME,
@@ -946,7 +1004,11 @@ describe('Signal K SDK', () => {
           .API()
           .then(api => api.self())
           .then(result => {
-            assert(result && typeof result === 'object' && result.hasOwnProperty('uuid'))
+            assert(
+              result &&
+                typeof result === 'object' &&
+                result.hasOwnProperty('uuid')
+            )
             done()
           })
           .catch(err => done(err))
