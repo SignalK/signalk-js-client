@@ -51,6 +51,7 @@ export default class Client extends EventEmitter {
     this.services = []
     this.notifications = {}
     this.requests = {}
+    this.fetchReady = null
 
     if (this.options.autoConnect === true) {
       this.connect().catch(err => this.emit('error', err))
@@ -157,6 +158,10 @@ export default class Client extends EventEmitter {
         resolve(this.connection)
       })
 
+      this.connection.on('fetchReady', () => {
+        this.fetchReady = true
+      })
+
       this.connection.on('error', err => {
         this.emit('error', err)
         reject(err)
@@ -216,11 +221,21 @@ export default class Client extends EventEmitter {
       return Promise.reject(new Error('There are no available connections. Please connect before you use the REST API.'))
     }
 
-    if (this.api === null && this.connection !== null) {
-      this.api = new API(this.connection)
+    if (this.api !== null) {
+      return Promise.resolve(this.api)
     }
 
-    return Promise.resolve(this.api)
+    return new Promise((resolve) => {
+      this.api = new API(this.connection)
+
+      if (this.fetchReady === true) {
+        return resolve(this.api)
+      }
+
+      this.connection.on('fetchReady', () => {
+        resolve(this.api)
+      })
+    })
   }
 
   subscription () {

@@ -26,6 +26,7 @@ export default class Connection extends EventEmitter {
     this.lastMessage = -1
     this.isConnecting = false
     
+    this._fetchReady = false
     this._bearerTokenPrefix = this.options.bearerTokenPrefix || 'Bearer'
     this._authenticated = false
     this._retries = 0
@@ -89,6 +90,14 @@ export default class Connection extends EventEmitter {
     return uri
   }
 
+  state () {
+    return {
+      connecting: this.isConnecting,
+      connected: this.connected,
+      ready: this.fetchReady
+    }
+  }
+
   disconnect () {
     debug('[disconnect] called')
     this.shouldDisconnect = true
@@ -126,11 +135,15 @@ export default class Connection extends EventEmitter {
 
     debug(`[reconnect] socket is ${this.socket === null ? '' : 'not '}NULL`)
 
+    this._fetchReady = false
     this.shouldDisconnect = false
     this.isConnecting = true
 
     if (this.options.useAuthentication === false) {
-      return this.initiateSocket()
+      this._fetchReady = true
+      this.emit('fetchReady')
+      this.initiateSocket()
+      return
     }
 
     const authRequest = {
@@ -157,12 +170,14 @@ export default class Connection extends EventEmitter {
           token: result.token
         }
 
+        this._fetchReady = true
+        this.emit('fetchReady')
         this.initiateSocket()
       })
       .catch(err => {
         this.emit('error', err)
         debug(`[reconnect] error logging in: ${err.message}`)
-        this.disconnect()
+        throw err
       })
   }
 
