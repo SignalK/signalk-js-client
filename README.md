@@ -1,5 +1,7 @@
 # Signal K JS SDK
 
+[![Build Status](https://travis-ci.org/SignalK/signalk-js-client.svg?branch=fabdrol-sdk)](https://travis-ci.org/SignalK/signalk-js-client)
+
 > A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s).
 
 
@@ -143,19 +145,17 @@ Signal K client for the Angular framework
 
 
 ### FUTURE RELEASES
-- [ ] Expand device access mechanism into its own EventEmitter, to automate the entire flow
+- [ ] Expand device access mechanism into its own EventEmitter
 - [ ] Master/slave detection during discovery, with correct selection. Should emit an event if multiple mains+masters are found
 - [ ] Dynamic REST API based on `signalk-schema`, auto-generated tests for each path so client can be used to test-drive servers
-- [ ] Full react-native compatibility (current version mostly works due to WS issues on RN)
-- [ ] Multiple sources for a data point/"select" feature
+- [ ] Multiple sources for a datapoint/"select" feature
 - [ ] History API support
 - [ ] Port codebase & tests to Typescript
 - [ ] Add an option to spawn a `WebWorker` for each `Connection`, offloading server comms to a different thread
 
 
 ### NOTES
-- (Note to self) Need to do PR for specification for access requests & make issue for node server & sdk to update
-- mDNS advert should advertise wether server supports TLS (?)
+- mDNS advert should advertise if server supports TLS
 - `PUT requests via REST` have been implemented, but don't have a valid test yet. Need to figure out how to test this
 - Node SK server responds with "Request updated" for access request responses. This is incorrect per spec
 - Node SK server paths for access requests repsponses are not correct to spec (i.e. no /signalk/v1 prefix)
