@@ -182,6 +182,7 @@ export default class Connection extends EventEmitter {
   }
 
   setAuthenticated (token, kind = 'JWT') { // @FIXME default type should be Bearer
+    this.emit('fetchReady')
     this._authenticated = true
     this._token = {
       kind,

@@ -228,7 +228,7 @@ export default class Client extends EventEmitter {
     return new Promise((resolve) => {
       this.api = new API(this.connection)
 
-      if (this.fetchReady === true) {
+      if (this.fetchReady === true || this.options.useAuthentication === false) {
         return resolve(this.api)
       }
 
