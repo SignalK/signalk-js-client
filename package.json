@@ -4,7 +4,7 @@
   "description": "A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s)",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --require @babel/register",
+    "test": "mocha --require @babel/register --exit",
     "start": "nodemon --exec babel-node src/index.js",
     "dist": "./node_modules/.bin/babel src -d dist",
     "prepublish": "./node_modules/.bin/babel src -d dist",
