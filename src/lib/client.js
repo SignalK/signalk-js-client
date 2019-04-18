@@ -75,6 +75,7 @@ export default class Client extends EventEmitter {
       .fetch('/access/requests', {
         method: 'POST',
         mode: 'cors',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId,
@@ -94,6 +95,7 @@ export default class Client extends EventEmitter {
       .fetch(`/security/access/requests/${uuid}/${permissions === 'denied' ? 'denied' : 'approved'}`, {
         method: 'PUT',
         mode: 'cors',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           expiration,

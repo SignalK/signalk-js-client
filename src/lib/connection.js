@@ -149,7 +149,7 @@ export default class Connection extends EventEmitter {
     const authRequest = {
       method: 'POST',
       mode: 'cors',
-      credentials: 'include',
+      credentials: 'same-origin',
       body: JSON.stringify({
         username: String(this.options.username || ''),
         password: String(this.options.password || '')
