@@ -90,6 +90,7 @@ class Client extends _eventemitter.default {
     return this.connection.fetch('/access/requests', {
       method: 'POST',
       mode: 'cors',
+      credentials: 'same-origin',
       headers: {
         'Content-Type': 'application/json'
       },
@@ -110,6 +111,7 @@ class Client extends _eventemitter.default {
     return this.connection.fetch(`/security/access/requests/${uuid}/${permissions === 'denied' ? 'denied' : 'approved'}`, {
       method: 'PUT',
       mode: 'cors',
+      credentials: 'same-origin',
       headers: {
         'Content-Type': 'application/json'
       },
