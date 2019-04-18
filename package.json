@@ -7,8 +7,7 @@
     "test": "mocha --require @babel/register --exit",
     "start": "nodemon --exec babel-node src/index.js",
     "dist": "./node_modules/.bin/babel src -d dist",
-    "prepublish": "./node_modules/.bin/babel src -d dist",
-    "postinstall": "./node_modules/.bin/babel src -d dist",
+    "prepublishOnly": "./node_modules/.bin/babel src -d dist",
     "push": "npm publish --access public --scope @signalk ."
   },
   "keywords": [
