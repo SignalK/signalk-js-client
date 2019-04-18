@@ -68,15 +68,11 @@ class Client extends _eventemitter.default {
     this.services = [];
     this.notifications = {};
     this.requests = {};
+    this.fetchReady = null;
 
     if (this.options.autoConnect === true) {
-      return this.connect().catch(err => {
-        this.emit('error', err);
-        throw err;
-      });
+      this.connect().catch(err => this.emit('error', err));
     }
-
-    return Promise.resolve(this);
   }
 
   set(key, value) {
@@ -158,26 +154,33 @@ class Client extends _eventemitter.default {
 
   connect() {
     if (this.connection !== null) {
-      return this.connection.reconnect(true);
+      this.connection.reconnect(true);
+      return Promise.resolve(this.connection);
     }
 
-    this.connection = new _connection.default(this.options);
-    this.connection.on('disconnect', data => this.emit('disconnect', data));
-    this.connection.on('message', data => this.emit('message', data));
-    this.connection.on('connectionInfo', data => this.emit('connectionInfo', data));
-    this.connection.on('self', data => this.emit('self', data));
-    this.connection.on('hitMaxRetries', () => this.emit('hitMaxRetries'));
-    this.connection.on('connect', () => {
-      if (this.options.notifications === true) {
-        this.subscribeToNotifications();
-      }
+    return new Promise((resolve, reject) => {
+      this.connection = new _connection.default(this.options);
+      this.connection.on('disconnect', data => this.emit('disconnect', data));
+      this.connection.on('message', data => this.emit('message', data));
+      this.connection.on('connectionInfo', data => this.emit('connectionInfo', data));
+      this.connection.on('self', data => this.emit('self', data));
+      this.connection.on('hitMaxRetries', () => this.emit('hitMaxRetries'));
+      this.connection.on('connect', () => {
+        if (this.options.notifications === true) {
+          this.subscribeToNotifications();
+        }
 
-      this.emit('connect');
+        this.emit('connect');
+        resolve(this.connection);
+      });
+      this.connection.on('fetchReady', () => {
+        this.fetchReady = true;
+      });
+      this.connection.on('error', err => {
+        this.emit('error', err);
+        reject(err);
+      });
     });
-    this.connection.on('error', err => {
-      this.emit('error', err);
-    });
-    return this.connection.reconnect(true);
   }
 
   disconnect() {
@@ -233,11 +236,21 @@ class Client extends _eventemitter.default {
       return Promise.reject(new Error('There are no available connections. Please connect before you use the REST API.'));
     }
 
-    if (this.api === null) {
-      this.api = new _api.default(this.connection);
+    if (this.api !== null) {
+      return Promise.resolve(this.api);
     }
 
-    return Promise.resolve(this.api);
+    return new Promise(resolve => {
+      this.api = new _api.default(this.connection);
+
+      if (this.fetchReady === true || this.options.useAuthentication === false) {
+        return resolve(this.api);
+      }
+
+      this.connection.on('fetchReady', () => {
+        resolve(this.api);
+      });
+    });
   }
 
   subscription() {

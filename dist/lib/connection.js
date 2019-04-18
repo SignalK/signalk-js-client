@@ -36,8 +36,7 @@ class Connection extends _eventemitter.default {
     this.socket = null;
     this.lastMessage = -1;
     this.isConnecting = false;
-    this.fetchReady = false;
-    this.connectPromise = null;
+    this._fetchReady = false;
     this._bearerTokenPrefix = this.options.bearerTokenPrefix || 'Bearer';
     this._authenticated = false;
     this._retries = 0;
@@ -51,6 +50,7 @@ class Connection extends _eventemitter.default {
       kind: '',
       token: ''
     };
+    this.reconnect(true);
   }
 
   set self(data) {
@@ -78,14 +78,6 @@ class Connection extends _eventemitter.default {
     return this._connection;
   }
 
-  state() {
-    return {
-      connected: this.connected,
-      connecting: this.isConnecting,
-      fetchReady: this.fetchReady
-    };
-  }
-
   buildURI(protocol) {
     let uri = this.options.useTLS === true ? `${protocol}s://` : `${protocol}://`;
     uri += this.options.hostname;
@@ -104,6 +96,14 @@ class Connection extends _eventemitter.default {
     return uri;
   }
 
+  state() {
+    return {
+      connecting: this.isConnecting,
+      connected: this.connected,
+      ready: this.fetchReady
+    };
+  }
+
   disconnect() {
     debug('[disconnect] called');
     this.shouldDisconnect = true;
@@ -113,51 +113,44 @@ class Connection extends _eventemitter.default {
   reconnect() {
     let initial = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
 
-    // this.connectPromise is used to store the reconnection attempt, should a user
-    // call this method again whilst connecting.
     if (this.isConnecting === true) {
-      return this.connectPromise;
+      return;
     }
 
     if (this.socket !== null) {
       debug('[reconnect] closing socket');
       this.socket.close();
-      return this.connectPromise;
+      return;
     }
-
-    this.fetchReady = false;
 
     if (initial !== true && this._retries === this.options.maxRetries) {
       this.emit('hitMaxRetries');
       this.cleanupListeners();
-      this.connectPromise = Promise.reject(new Error(`Hit max retries`));
-      return this.connectPromise;
+      return;
     }
 
     if (initial !== true && this.options.reconnect === false) {
       debug('[reconnect] Not reconnecting, for reconnect is false');
       this.cleanupListeners();
-      this.connectPromise = Promise.resolve(this.fetchReady);
-      return this.connectPromise;
+      return;
     }
 
     if (initial !== true && this.shouldDisconnect === true) {
       debug('[reconnect] not reconnecting, shouldDisconnect is true');
       this.cleanupListeners();
-      this.connectPromise = Promise.resolve(this.fetchReady);
-      return this.connectPromise;
+      return;
     }
 
     debug(`[reconnect] socket is ${this.socket === null ? '' : 'not '}NULL`);
-    this.connected = false;
+    this._fetchReady = false;
     this.shouldDisconnect = false;
     this.isConnecting = true;
 
     if (this.options.useAuthentication === false) {
+      this._fetchReady = true;
+      this.emit('fetchReady');
       this.initiateSocket();
-      this.fetchReady = true;
-      this.connectPromise = Promise.resolve(this.fetchReady);
-      return this.connectPromise;
+      return;
     }
 
     const authRequest = {
@@ -169,7 +162,7 @@ class Connection extends _eventemitter.default {
         password: String(this.options.password || '')
       })
     };
-    this.connectPromise = this.fetch('/auth/login', authRequest).then(result => {
+    this.fetch('/auth/login', authRequest).then(result => {
       if (!result || typeof result !== 'object' || !result.hasOwnProperty('token')) {
         throw new Error(`Unexpected response from auth endpoint: ${JSON.stringify(result)}`);
       }
@@ -180,22 +173,20 @@ class Connection extends _eventemitter.default {
         kind: typeof result.type === 'string' && result.type.trim() !== '' ? result.type : this._bearerTokenPrefix,
         token: result.token
       };
+      this._fetchReady = true;
+      this.emit('fetchReady');
       this.initiateSocket();
-      this.fetchReady = true;
-      return this.fetchReady;
     }).catch(err => {
-      debug(`[reconnect] error logging in: ${err.message}`);
       this.emit('error', err);
-      this.disconnect();
-      this.fetchReady = false;
+      debug(`[reconnect] error logging in: ${err.message}`);
       throw err;
     });
-    return this.connectPromise;
   }
 
   setAuthenticated(token) {
     let kind = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'JWT';
     // @FIXME default type should be Bearer
+    this.emit('fetchReady');
     this._authenticated = true;
     this._token = {
       kind,
