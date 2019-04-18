@@ -314,7 +314,7 @@ class Connection extends _eventemitter.default {
       opts.headers = _objectSpread({}, opts.headers, {
         Authorization: `${this._token.kind} ${this._token.token}`
       });
-      opts.credentials = 'include';
+      opts.credentials = 'same-origin';
       opts.mode = 'cors';
       debug(`[fetch] enriching fetch options with in-memory token`);
     }
