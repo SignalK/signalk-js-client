@@ -1,5 +1,0 @@
-*.log
-.babelrc
-.eslintrc
-/index.js
-/test

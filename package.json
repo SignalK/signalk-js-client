@@ -1,47 +1,64 @@
 {
   "name": "@signalk/client",
-  "version": "0.2.1",
-  "description": "Signal K JavaScript Client",
-  "main": "./dist/index.js",
+  "version": "2.0.0",
+  "description": "A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s)",
+  "main": "index.js",
   "scripts": {
-    "test": "mocha",
-    "lint": "eslint index.js",
-    "prettier": "prettier --print-width 119 --single-quote --trailing-comma es5 --no-bracket-spacing --write *.js",
-    "changelog": "github-changes -o signalk -r signalk-js-client -a --only-pulls --use-commit-body --data=pulls",
-    "build": "babel index.js --out-dir dist",
-    "prepublish": "npm run lint && NODE_ENV=production npm run build",
-    "doc": "jsdoc -R README.md index.js"
+    "test": "mocha --require @babel/register --exit",
+    "start": "nodemon --exec babel-node src/index.js",
+    "dist": "./node_modules/.bin/babel src -d dist",
+    "prepublishOnly": "./node_modules/.bin/babel src -d dist",
+    "push": "npm publish --access public --scope @signalk ."
   },
   "keywords": [
-    "Signal K",
-    "SignalK",
-    "JavaScript"
+    "signal k",
+    "js",
+    "javascript",
+    "ecmascript",
+    "client",
+    "sdk"
   ],
+  "author": "Fabian Tollenaar <fabian@decipher.industries> (http://signalk.org)",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.3.4",
+    "@babel/preset-env": "^7.3.4",
+    "@babel/register": "^7.0.0",
+    "casper-chai": "^0.3.0",
+    "chai": "^4.1.0",
+    "freeport-promise": "^1.1.0",
+    "mdns": "^2.4.0",
+    "mocha": "^6.0.2",
+    "signalk-server": "^1.13.0"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/signalk/signalk-js-client"
+    "url": "https://github.com/SignalK/signalk-js-client"
   },
-  "author": "Teppo Kurki <teppo.kurki@iki.fi>",
-  "license": "Apache-2.0",
+  "homepage": "https://github.com/SignalK/signalk-js-client",
+  "bugs": {
+    "url": "https://github.com/SignalK/signalk-js-client/issues"
+  },
+  "standard": {
+    "globals": [
+      "describe",
+      "before",
+      "after",
+      "it",
+      "expect",
+      "Promise",
+      "WebSocket"
+    ]
+  },
   "dependencies": {
-    "bluebird": "^3.5.0",
-    "debug": "^3.0.0",
-    "eventemitter3": "^3.0.0",
-    "lodash": "^4.0.1",
-    "superagent": "^3.5.2",
-    "superagent-promise": "^1.0.3",
-    "url": "^0.11.0",
-    "ws": "^3.0.0"
-  },
-  "devDependencies": {
-    "babel-cli": "^6.24.1",
-    "babel-preset-babili": "^0.1.2",
-    "babel-preset-es2015": "^6.24.1",
-    "chai": "^4.0.1",
-    "eslint": "^4.1.0",
-    "eslint-plugin-es5": "^1.1.0",
-    "github-changes": "^1.1.0",
-    "jsdoc": "^3.4.0",
-    "prettier": "^1.4.1"
+    "@babel/polyfill": "^7.2.5",
+    "core-js": "^2.6.5",
+    "cross-fetch": "^2.1.1",
+    "debug": "^4.1.1",
+    "eventemitter3": "^3.0.1",
+    "isomorphic-ws": "^4.0.0",
+    "uuid": "^3.3.2",
+    "ws": "^6.1.3"
   }
 }

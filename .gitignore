@@ -4,4 +4,3 @@ node_modules
 *.log
 logs/*
 bower_components
-dist
