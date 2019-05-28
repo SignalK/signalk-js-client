@@ -156,7 +156,7 @@ export default class Connection extends EventEmitter {
       })
     }
 
-    this.fetch('/auth/login', authRequest)
+    return this.fetch('/auth/login', authRequest)
       .then(result => {
         if (!result || typeof result !== 'object' || !result.hasOwnProperty('token')) {
           throw new Error(`Unexpected response from auth endpoint: ${JSON.stringify(result)}`)
@@ -175,9 +175,11 @@ export default class Connection extends EventEmitter {
         this.initiateSocket()
       })
       .catch(err => {
+        debug(`[reconnect] error logging in: ${err.message}, reconnecting`)
         this.emit('error', err)
-        debug(`[reconnect] error logging in: ${err.message}`)
-        throw err
+        this._retries += 1
+        this.isConnecting = false
+        return this.reconnect()
       })
   }
 

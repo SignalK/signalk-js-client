@@ -6,12 +6,13 @@
  * @module        @signalk/signalk-js-sdk
  */
 
-import mdns from 'mdns'
 import Client, {
   Discovery,
   Client as NamedClient,
   PERMISSIONS_READONLY
 } from '../src'
+
+import mdns from 'mdns'
 import { assert } from 'chai'
 import { v4 as uuid } from 'uuid'
 import Server from 'signalk-server'
@@ -38,19 +39,19 @@ const isObject = (mixed, prop, propIsObject) => {
 
 const USER = 'sdk'
 const PASSWORD = 'signalk'
+let TEST_SERVER_HOSTNAME = process.env.TEST_SERVER_HOSTNAME
+let TEST_SERVER_PORT = process.env.TEST_SERVER_PORT
+let serverApp
 
 const securityConfig = {
   allow_readonly: false,
   expiration: '1d',
-  secretKey:
-    '3c2eddf95ece9080518eb777b26c0fa6285f107cccb5ff9d5bdd7776eeb82c8afaf0dffa7d9312936882351ec6b1d5535203b4a2b806ab130cdbcd917f46f2a69e7ff4548ca3644c97a98185284041de46518cdb026f85430532fa4482882e4cfd08cc0256dca88d0ca2577b91d6a435a832e6c600b2db13f794d087e5e3a181d9566c1e61a14f984dbc643a7f6ab6a60cafafff34c93475d442475136cf7f0bfb62c59b050a9be572bc26993c46ef05fa748dc8395277eaa07519d79a7bc12502a2429b2f89b78796f6dcf3f474a5c5e276ecbb59dcdceaa8df8f1b1f98ec23a4c36cc1334e07e06a8c8cd6671fee599e578d24aabd187d1a2903ae6facb090',
-  users: [
-    {
-      username: 'sdk',
-      type: 'admin',
-      password: '$2a$10$JyzSM5PMD3PCyivdtSN61OfwmjfgdISVtJ1l5KIC8/R1sUHPseMU2'
-    }
-  ],
+  secretKey: '3c2eddf95ece9080518eb777b26c0fa6285f107cccb5ff9d5bdd7776eeb82c8afaf0dffa7d9312936882351ec6b1d5535203b4a2b806ab130cdbcd917f46f2a69e7ff4548ca3644c97a98185284041de46518cdb026f85430532fa4482882e4cfd08cc0256dca88d0ca2577b91d6a435a832e6c600b2db13f794d087e5e3a181d9566c1e61a14f984dbc643a7f6ab6a60cafafff34c93475d442475136cf7f0bfb62c59b050a9be572bc26993c46ef05fa748dc8395277eaa07519d79a7bc12502a2429b2f89b78796f6dcf3f474a5c5e276ecbb59dcdceaa8df8f1b1f98ec23a4c36cc1334e07e06a8c8cd6671fee599e578d24aabd187d1a2903ae6facb090',
+  users: [{
+    username: 'sdk',
+    type: 'admin',
+    password: '$2a$10$JyzSM5PMD3PCyivdtSN61OfwmjfgdISVtJ1l5KIC8/R1sUHPseMU2'
+  }],
   devices: [],
   immutableConfig: false,
   acls: [],
@@ -58,32 +59,53 @@ const securityConfig = {
   allowNewUserRegistration: true
 }
 
-let TEST_SERVER_HOSTNAME = process.env.TEST_SERVER_HOSTNAME
-let TEST_SERVER_PORT = process.env.TEST_SERVER_PORT || 80
+function startServer (done = () => {}) {
+  TEST_SERVER_HOSTNAME = 'localhost'
+
+  let promise
+
+  if (!TEST_SERVER_PORT) {
+    promise = freeport()
+  } else {
+    promise = Promise.resolve(TEST_SERVER_PORT)
+  }
+
+  promise.then(port => {
+    TEST_SERVER_PORT = port
+    serverApp = new Server({
+      config: {
+        settings: {
+          port,
+          interfaces: {
+            plugins: false
+          },
+          security: {
+            strategy: './tokensecurity'
+          }
+        }
+      },
+      securityConfig: securityConfig
+    })
+    serverApp.start().then(() => done())
+  })
+}
+
+function killServer (done = () => {}) {
+  if (!serverApp) {
+    return done()
+  }
+
+  serverApp.stop().then(() => done())
+}
 
 describe('Signal K SDK', () => {
   before(done => {
     if (TEST_SERVER_HOSTNAME) {
       done()
     } else {
-      TEST_SERVER_HOSTNAME = 'localhost'
-      freeport().then(port => {
-        TEST_SERVER_PORT = port
-        const serverApp = new Server({
-          config: {
-            settings: {
-              port,
-              interfaces: {
-                plugins: false
-              },
-              security: {
-                strategy: './tokensecurity'
-              }
-            }
-          },
-          securityConfig: securityConfig
-        })
-        serverApp.start().then(() => done())
+      startServer(() => {
+        console.log('STARTED SERVER')
+        done()
       })
     }
   })
@@ -123,6 +145,7 @@ describe('Signal K SDK', () => {
       client.connect()
     }).timeout(30000)
 
+    /*
     it('... receives an access request sent by some device', done => {
       let isDone = false
       const clientId = uuid()
@@ -132,7 +155,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         useAuthentication: true,
         username: USER,
-        password: 'signalk',
+        password: PASSWORD,
         reconnect: false,
         notifications: true,
         bearerTokenPrefix: 'JWT'
@@ -158,6 +181,7 @@ describe('Signal K SDK', () => {
 
       client.connect()
     }).timeout(30000)
+    // */
 
     it('... can respond to the access request notification sent by server', done => {
       let sent = false
@@ -168,7 +192,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         useAuthentication: true,
         username: USER,
-        password: 'signalk',
+        password: PASSWORD,
         reconnect: false,
         notifications: true,
         bearerTokenPrefix: 'JWT'
@@ -204,7 +228,7 @@ describe('Signal K SDK', () => {
       client.connect()
     }).timeout(30000)
   })
-
+  
   describe('On-demand authentication using request/response dynamics', () => {
     it('... sends an authentication request with incorrect password, and receives the proper error code', done => {
       const client = new Client({
@@ -286,7 +310,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         useAuthentication: true,
         username: USER,
-        password: 'signalk',
+        password: PASSWORD,
         reconnect: false,
         notifications: false,
         bearerTokenPrefix: 'JWT'
@@ -338,7 +362,7 @@ describe('Signal K SDK', () => {
         const request = client.request('LOGIN', {
           login: {
             username: USER,
-            password: 'signalk'
+            password: PASSWORD
           }
         })
 
@@ -397,7 +421,7 @@ describe('Signal K SDK', () => {
       })
     }).timeout(15000)
   })
-
+  
   describe('Subscriptions', () => {
     it('... Creates a subscription for navigation data', done => {
       const client = new Client({
@@ -520,7 +544,7 @@ describe('Signal K SDK', () => {
         notifications: true,
         useAuthentication: true,
         username: USER,
-        password: 'signalk',
+        password: PASSWORD,
         bearerTokenPrefix: 'JWT'
       })
 
@@ -546,7 +570,7 @@ describe('Signal K SDK', () => {
         port: TEST_SERVER_PORT,
         useAuthentication: true,
         username: USER,
-        password: 'signalk',
+        password: PASSWORD,
         useTLS: false,
         reconnect: false,
         autoConnect: true,
@@ -853,6 +877,35 @@ describe('Signal K SDK', () => {
     })
   })
 
+  describe('Module API', () => {
+    it('... exports a Signal K Client as a named constant and the default export', done => {
+      assert(Client === NamedClient)
+      done()
+    })
+
+    it('... successfully instantiates a Client with default options', done => {
+      const client = new Client()
+      assert(client.options.hostname === 'localhost')
+      assert(client.options.port === 3000)
+      assert(client.options.useTLS === true)
+      assert(client.options.version === 'v1')
+      assert(client.options.autoConnect === false)
+      done()
+    })
+
+    it('... instantiates a Client with custom options', done => {
+      const client = new Client({ hostname: 'signalk.org' })
+      assert(client.options.hostname === 'signalk.org')
+      done()
+    })
+
+    it('... Client is an EventEmitter', done => {
+      const client = new Client()
+      assert(typeof client.on === 'function')
+      done()
+    })
+  })
+
   describe('Connection', () => {
     it('... Successfully closes the connection and any connection attempts when "disconnect" is called', done => {
       let client = new Client({
@@ -1042,7 +1095,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         useAuthentication: true,
         username: USER,
-        password: 'signalk',
+        password: PASSWORD,
         reconnect: false,
         notifications: false,
         bearerTokenPrefix: 'JWT'
@@ -1066,34 +1119,88 @@ describe('Signal K SDK', () => {
       client.connect()
     }).timeout(15000)
     // */
-  })
 
-  describe('Module API', () => {
-    it('... exports a Signal K Client as a named constant and the default export', done => {
-      assert(Client === NamedClient)
-      done()
-    })
+    it('... Successfully re-connects after the remote server is restarted', done => {
+      const client = new Client({
+        hostname: TEST_SERVER_HOSTNAME,
+        port: TEST_SERVER_PORT,
+        useTLS: false,
+        useAuthentication: true,
+        username: USER,
+        password: PASSWORD,
+        reconnect: true,
+        notifications: false,
+        bearerTokenPrefix: 'JWT',
+        maxRetries: Infinity
+      })
 
-    it('... successfully instantiates a Client with default options', done => {
-      const client = new Client()
-      assert(client.options.hostname === 'localhost')
-      assert(client.options.port === 3000)
-      assert(client.options.useTLS === true)
-      assert(client.options.version === 'v1')
-      assert(client.options.autoConnect === false)
-      done()
-    })
+      let connectionCount = 0
 
-    it('... instantiates a Client with custom options', done => {
-      const client = new Client({ hostname: 'signalk.org' })
-      assert(client.options.hostname === 'signalk.org')
-      done()
-    })
+      client.on('connect', () => {
+        connectionCount += 1
+        if (connectionCount === 1) {
+          killServer(() => setTimeout(() => {
+            startServer()
+          }, 100))
+        }
 
-    it('... Client is an EventEmitter', done => {
-      const client = new Client()
-      assert(typeof client.on === 'function')
-      done()
-    })
+        if (connectionCount === 2) {
+          done()
+        }
+      })
+
+      client.connect()
+    }).timeout(15000)
+    
+    /*
+    // @NOTE:
+    // this test requires a manual restart of the test server, 
+    // as the included server doesn't emit deltas
+
+    it('... Successfully re-subscribes to all data after the remote server is restarted', done => {
+      const client = new Client({
+        hostname: 'hq.decipher.digital',
+        port: 3000,
+        useTLS: false,
+        useAuthentication: false,
+        reconnect: true,
+        notifications: false,
+        bearerTokenPrefix: 'JWT',
+        maxRetries: Infinity
+      })
+
+      let connectionCount = 0
+      let serverKilled = false
+      let deltas = 0
+      let doneCalled = false
+
+      client.on('delta', data => {
+        if (!data || typeof data !== 'object' || !data.hasOwnProperty('updates') || serverKilled === true) {
+          return
+        }
+
+        deltas += 1
+        if (connectionCount > 1 && doneCalled === false) {
+          doneCalled = true
+          assert(deltas >= 1000)
+          done(deltas >= 1000 ? null : new Error('Didn\'t get deltas after reconnection'))
+        }
+      })
+
+      client.on('connect', () => {
+        connectionCount += 1
+
+        if (connectionCount === 1) {
+          client.subscribe()
+        }
+
+        if (connectionCount > 1) {
+          deltas = 1000
+        }
+      })
+
+      client.connect()
+    }).timeout(150000)
+    // */
   })
 })
