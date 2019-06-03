@@ -58,7 +58,7 @@
     "debug": "^4.1.1",
     "eventemitter3": "^3.0.1",
     "isomorphic-ws": "^4.0.0",
-    "mqtt-packet": "^5.6.1",
+    "mqtt-packet": "^6.1.2",
     "uuid": "^3.3.2",
     "ws": "^7.0.0"
   }
