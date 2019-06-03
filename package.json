@@ -7,7 +7,9 @@
     "test": "mocha --require @babel/register --exit",
     "start": "nodemon --exec babel-node src/index.js",
     "dist": "./node_modules/.bin/babel src -d dist",
-    "prepublishOnly": "./node_modules/.bin/babel src -d dist",
+    "prepublishOnly": "npm run dist",
+    "preversion": "npm test",
+    "postversion": "npm run push && git add --all . && git commit -am 'Version bump' && git push && git push --tags",
     "push": "npm publish --access public --scope @signalk ."
   },
   "keywords": [
