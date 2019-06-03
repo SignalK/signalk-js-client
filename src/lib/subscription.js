@@ -10,18 +10,26 @@
 import EventEmitter from 'eventemitter3'
 
 export default class Subscription extends EventEmitter {
-  constructor (connection, api, options = {}) {
+  constructor (connection, api, options = {}, identifier) {
     super()
     this.connection = connection
     this.api = api
     this.active = false
     this._listener = (data) => this.message(data)
 
+    this.identifier = identifier
     this.options = {
       context: '*',
       subscribe: [{ path: '*' }],
       ...options
     }
+  }
+
+  getSubscriptionData () {
+    return Object.assign({}, {
+      options: this.options,
+      identifier: this.identifier
+    })
   }
 
   subscribe () {
