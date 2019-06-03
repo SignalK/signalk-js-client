@@ -18,6 +18,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 class Subscription extends _eventemitter.default {
   constructor(connection, api) {
     let options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    let identifier = arguments.length > 3 ? arguments[3] : undefined;
     super();
     this.connection = connection;
     this.api = api;
@@ -25,12 +26,20 @@ class Subscription extends _eventemitter.default {
 
     this._listener = data => this.message(data);
 
+    this.identifier = identifier;
     this.options = _objectSpread({
       context: '*',
       subscribe: [{
         path: '*'
       }]
     }, options);
+  }
+
+  getSubscriptionData() {
+    return Object.assign({}, {
+      options: this.options,
+      identifier: this.identifier
+    });
   }
 
   subscribe() {

@@ -162,7 +162,7 @@ class Connection extends _eventemitter.default {
         password: String(this.options.password || '')
       })
     };
-    this.fetch('/auth/login', authRequest).then(result => {
+    return this.fetch('/auth/login', authRequest).then(result => {
       if (!result || typeof result !== 'object' || !result.hasOwnProperty('token')) {
         throw new Error(`Unexpected response from auth endpoint: ${JSON.stringify(result)}`);
       }
@@ -177,9 +177,11 @@ class Connection extends _eventemitter.default {
       this.emit('fetchReady');
       this.initiateSocket();
     }).catch(err => {
+      debug(`[reconnect] error logging in: ${err.message}, reconnecting`);
       this.emit('error', err);
-      debug(`[reconnect] error logging in: ${err.message}`);
-      throw err;
+      this._retries += 1;
+      this.isConnecting = false;
+      return this.reconnect();
     });
   }
 

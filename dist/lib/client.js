@@ -172,6 +172,17 @@ class Client extends _eventemitter.default {
           this.subscribeToNotifications();
         }
 
+        debug(`Connected. ${Object.keys(this.subscriptions).length === 0 ? '' : 'Resubscribing'}`);
+        Object.keys(this.subscriptions).forEach(name => {
+          if (name === NOTIFICATIONS_SUBSCRIPTION) {
+            return;
+          }
+
+          debug(`Re-subscribing: ${name}`);
+          const sub = this.subscriptions[name].getSubscriptionData();
+          this.unsubscribe(name, false);
+          this.subscribe(sub.options, name);
+        });
         this.emit('connect');
         resolve(this.connection);
       });
@@ -269,6 +280,7 @@ class Client extends _eventemitter.default {
     const name = typeof identifier === 'string' && identifier.trim() !== '' ? identifier : SUBSCRIPTION_NAME;
 
     if (this.connection === null) {
+      debug('Can\'t subscribe: no connections');
       return Promise.reject(new Error('There are no available connections. Please connect before subscribe.'));
     }
 
@@ -277,10 +289,11 @@ class Client extends _eventemitter.default {
     }
 
     if (this.subscriptions.hasOwnProperty(name) && this.subscriptions[name]) {
+      debug('Can\'t subscribe: subscription exists');
       return Promise.resolve(this.subscriptions[name]);
     }
 
-    this.subscriptions[name] = new _subscription.default(this.connection, this.api, options, identifier);
+    this.subscriptions[name] = new _subscription.default(this.connection, this.api, options, name);
     this.subscriptions[name].on('unsubscribe', () => this.emit('unsubscribe'));
     this.subscriptions[name].on('subscribe', () => this.emit('subscribe', this.subscriptions[name]));
     this.subscriptions[name].on('delta', delta => this.emit('delta', delta));
@@ -288,14 +301,20 @@ class Client extends _eventemitter.default {
     return this.subscriptions[name].subscribe();
   }
 
-  unsubscribe() {
-    if (this.subscriptions.hasOwnProperty(SUBSCRIPTION_NAME) && this.subscriptions[SUBSCRIPTION_NAME]) {
-      this.subscriptions[SUBSCRIPTION_NAME].unsubscribe();
-      this.subscriptions[SUBSCRIPTION_NAME] = null;
-      delete this.subscriptions[SUBSCRIPTION_NAME];
-      this.removeAllListeners('subscribe');
-      this.removeAllListeners('unsubscribe');
-      this.removeAllListeners('delta');
+  unsubscribe(name) {
+    let removelisteners = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    name = name || SUBSCRIPTION_NAME;
+
+    if (this.subscriptions.hasOwnProperty(name) && this.subscriptions[name]) {
+      this.subscriptions[name].unsubscribe();
+      this.subscriptions[name] = null;
+      delete this.subscriptions[name];
+
+      if (removelisteners === true) {
+        this.removeAllListeners('subscribe');
+        this.removeAllListeners('unsubscribe');
+        this.removeAllListeners('delta');
+      }
     }
   }
 
