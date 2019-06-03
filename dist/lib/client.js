@@ -5,6 +5,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = exports.PERMISSIONS_DENY = exports.PERMISSIONS_READONLY = exports.PERMISSIONS_READWRITE = exports.AUTHENTICATION_REQUEST = exports.NOTIFICATIONS_SUBSCRIPTION = exports.SUBSCRIPTION_NAME = void 0;
 
+require("core-js/modules/es6.symbol");
+
 require("core-js/modules/es6.regexp.replace");
 
 require("core-js/modules/web.dom.iterable");
@@ -108,7 +110,7 @@ class Client extends _eventemitter.default {
 
   respondToAccessRequest(uuid, permissions) {
     let expiration = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '1y';
-    return this.connection.fetch(`/security/access/requests/${uuid}/${permissions === 'denied' ? 'denied' : 'approved'}`, {
+    return this.connection.fetch("/security/access/requests/".concat(uuid, "/").concat(permissions === 'denied' ? 'denied' : 'approved'), {
       method: 'PUT',
       mode: 'cors',
       credentials: 'same-origin',
@@ -138,7 +140,7 @@ class Client extends _eventemitter.default {
         });
       }
 
-      this.emit('error', new Error(`Error authenticating: status ${response.statusCode}`));
+      this.emit('error', new Error("Error authenticating: status ".concat(response.statusCode)));
     });
     request.send();
   }
@@ -148,7 +150,7 @@ class Client extends _eventemitter.default {
 
     if (!this.requests.hasOwnProperty(name)) {
       this.requests[name] = new _request.default(this.connection, name, body);
-      debug(`Registered request "${name}" with ID ${this.requests[name].getRequestId()}`);
+      debug("Registered request \"".concat(name, "\" with ID ").concat(this.requests[name].getRequestId()));
     }
 
     return this.requests[name];
@@ -172,13 +174,13 @@ class Client extends _eventemitter.default {
           this.subscribeToNotifications();
         }
 
-        debug(`Connected. ${Object.keys(this.subscriptions).length === 0 ? '' : 'Resubscribing'}`);
+        debug("Connected. ".concat(Object.keys(this.subscriptions).length === 0 ? '' : 'Resubscribing'));
         Object.keys(this.subscriptions).forEach(name => {
           if (name === NOTIFICATIONS_SUBSCRIPTION) {
             return;
           }
 
-          debug(`Re-subscribing: ${name}`);
+          debug("Re-subscribing: ".concat(name));
           const sub = this.subscriptions[name].getSubscriptionData();
           this.unsubscribe(name, false);
           this.subscribe(sub.options, name);
@@ -334,11 +336,11 @@ class Client extends _eventemitter.default {
           path
         }, this.notifications[path]);
 
-        debug(`[subscribeToNotifications] emitting initial notification: ${JSON.stringify(notification, null, 2)}`);
+        debug("[subscribeToNotifications] emitting initial notification: ".concat(JSON.stringify(notification, null, 2)));
         this.emit('notification', notification);
       });
     }).catch(err => {
-      debug(`[subscribeToNotifications] error getting initial notifications: ${err.message}`);
+      debug("[subscribeToNotifications] error getting initial notifications: ".concat(err.message));
     });
 
     if (this.subscriptions.hasOwnProperty(NOTIFICATIONS_SUBSCRIPTION)) {
@@ -387,7 +389,7 @@ class Client extends _eventemitter.default {
             path
           }, this.notifications[path]);
 
-          debug(`[subscribeToNotifications] emitting notification: ${JSON.stringify(notification, null, 2)}`);
+          debug("[subscribeToNotifications] emitting notification: ".concat(JSON.stringify(notification, null, 2)));
           this.emit('notification', notification);
         }
       });
@@ -405,7 +407,7 @@ const flattenTree = tree => {
   let currentPath = '';
 
   const evaluateLeaf = key => {
-    currentPath += `${currentPath === '' ? '' : '.'}${key}`;
+    currentPath += "".concat(currentPath === '' ? '' : '.').concat(key);
     cursor = cursor[key];
 
     if (!cursor || typeof cursor !== 'object') {

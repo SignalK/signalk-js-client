@@ -5,6 +5,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
+require("core-js/modules/es6.symbol");
+
 require("core-js/modules/web.dom.iterable");
 
 var _eventemitter = _interopRequireDefault(require("eventemitter3"));
@@ -42,7 +44,7 @@ class Request extends _eventemitter.default {
       requestId: this.requestId,
       query: true
     };
-    debug(`Sending query: ${JSON.stringify(request, null, 2)}`);
+    debug("Sending query: ".concat(JSON.stringify(request, null, 2)));
     this.connection.send(request);
   }
 
@@ -55,12 +57,12 @@ class Request extends _eventemitter.default {
       requestId: this.requestId
     }, this.body);
 
-    debug(`Sending request: ${JSON.stringify(request, null, 2)}`);
+    debug("Sending request: ".concat(JSON.stringify(request, null, 2)));
     this.connection.send(request);
   }
 
   addResponse(response) {
-    debug(`Got response for request "${this.name}": ${JSON.stringify(response, null, 2)}`);
+    debug("Got response for request \"".concat(this.name, "\": ").concat(JSON.stringify(response, null, 2)));
     const receivedAt = new Date().toISOString();
     this.responses.push({
       response,

@@ -30,7 +30,7 @@ class API {
     }
 
     if (path.charAt(0) !== '/') {
-      path = `/${path}`;
+      path = "/".concat(path);
     }
 
     return this.connection.fetch(path);
@@ -46,7 +46,7 @@ class API {
     }
 
     if (path.charAt(0) !== '/') {
-      path = `/${path}`;
+      path = "/".concat(path);
     }
 
     return this.connection.fetch(path, {
@@ -112,7 +112,7 @@ class API {
       path = '';
     }
 
-    return this.connection.fetch(`/vessels/self${path}`);
+    return this.connection.fetch("/vessels/self".concat(path));
   }
 
   vessel(mrn, path) {
@@ -120,7 +120,7 @@ class API {
       path = '';
     }
 
-    return this.connection.fetch(`/vessels/${mrn}${path}`);
+    return this.connection.fetch("/vessels/".concat(mrn).concat(path));
   }
 
   name() {
@@ -135,10 +135,10 @@ class API {
     }
 
     if (vessel === 'self') {
-      return this.self(`/${group}${path}`);
+      return this.self("/".concat(group).concat(path));
     }
 
-    return this.vessel(vessel, `/${group}${path}`);
+    return this.vessel(vessel, "/".concat(group).concat(path));
   }
 
   communication() {
