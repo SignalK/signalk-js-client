@@ -58,7 +58,7 @@
     "core-js": "^2.6.5",
     "cross-fetch": "^3.0.3",
     "debug": "^4.1.1",
-    "eventemitter3": "^3.0.1",
+    "eventemitter3": "^4.0.0",
     "isomorphic-ws": "^4.0.0",
     "mqtt-packet": "^5.6.1",
     "uuid": "^3.3.2",
