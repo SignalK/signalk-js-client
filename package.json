@@ -31,7 +31,7 @@
     "chai": "^4.1.0",
     "freeport-promise": "^1.1.0",
     "mdns": "^2.4.0",
-    "mocha": "^6.0.2",
+    "mocha": "^6.2.2",
     "signalk-server": "^1.13.0"
   },
   "repository": {
