@@ -26,7 +26,7 @@
     "@babel/cli": "^7.7.5",
     "@babel/core": "^7.7.5",
     "@babel/preset-env": "^7.7.6",
-    "@babel/register": "^7.0.0",
+    "@babel/register": "^7.7.4",
     "casper-chai": "^0.3.0",
     "chai": "^4.1.0",
     "freeport-promise": "^1.1.0",
