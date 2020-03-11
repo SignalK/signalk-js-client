@@ -81,7 +81,8 @@ function startServer (done = () => {}) {
           },
           security: {
             strategy: './tokensecurity'
-          }
+          },
+          mdns: true
         }
       },
       securityConfig: securityConfig
