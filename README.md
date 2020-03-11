@@ -1,6 +1,6 @@
-# Signal K JS SDK
+# Signal K JS Client
 
-[![Build Status](https://travis-ci.org/SignalK/signalk-js-client.svg?branch=fabdrol-sdk)](https://travis-ci.org/SignalK/signalk-js-client)
+[![Build Status](https://travis-ci.org/SignalK/signalk-js-client.svg)](https://travis-ci.org/SignalK/signalk-js-client)
 
 > A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s).
 
@@ -14,8 +14,8 @@ This is not yet published on Github. If you'd like to use an early version, use 
 
 ### BASIC USAGE
 ```javascript
-import Client, { Discovery } from '@signalk/signalk-js-sdk'
-import mdns from 'mdns'
+import Client, { Discovery } from '@signalk/client'
+import Bonjour from 'bonjour'
 
 let client = null
 
@@ -41,8 +41,9 @@ client = new Client({
 })
 
 // Discover client using mDNS
-// Params: mdns lib, search time
-const discovery = new Discovery(mdns, 60000)
+// Params: bonjour lib, search time
+const bonjour = Bonjour()
+const discovery = new Discovery(bonjour, 60000)
 
 // Timeout fires when search time is up and no servers were found
 discovery.on('timeout', () => console.log('No SK servers found'))
@@ -55,6 +56,7 @@ discovery.on('found', server => {
       useAuthentication: true,
       reconnect: true,
       autoConnect: true,
+      notifications: false,
       username: 'sdk@decipher.industries',
       password: 'signalk'
     })
@@ -131,20 +133,7 @@ Signal K client for the Angular framework
 [signalk-client-angular](https://github.com/panaaj/signalk-client-angular)
 
 
-### PRE-1.0 RELEASE CHECKLIST
-- [x] mDNS server discovery
-- [x] Security/authentication (REST) support
-- [x] Basic notifications/alarms support
-- [x] Access Request mechanism (responding to requests, as a special case of notification)
-- [x] Security/authentication (WS) support (relies on request/response)
-- [x] PUT requests via request/response over WS
-- [x] Access Request mechanism (basic requesting)
-- [x] PUT requests via REST
-- [x] Move mDNS stack into a separate class
-- [ ] Write comprehensive README of supported options, methods, examples, etc
-
-
-### FUTURE RELEASES
+### WISHLIST
 - [ ] Expand device access mechanism into its own EventEmitter
 - [ ] Master/slave detection during discovery, with correct selection. Should emit an event if multiple mains+masters are found
 - [ ] Dynamic REST API based on `signalk-schema`, auto-generated tests for each path so client can be used to test-drive servers
@@ -152,11 +141,12 @@ Signal K client for the Angular framework
 - [ ] History API support
 - [ ] Port codebase & tests to Typescript
 - [ ] Add an option to spawn a `WebWorker` for each `Connection`, offloading server comms to a different thread
+- [x] Switch mDNS to bonjour (pure JS) implementation
+- [ ] Add a React hook
 
 
 ### NOTES
 - mDNS advert should advertise if server supports TLS
-- `PUT requests via REST` have been implemented, but don't have a valid test yet. Need to figure out how to test this
 - Node SK server responds with "Request updated" for access request responses. This is incorrect per spec
 - Node SK server paths for access requests repsponses are not correct to spec (i.e. no /signalk/v1 prefix)
 - ~~Security is implemented, but the token type is currently hardcoded to `JWT` if no `token.type` is returned by a SK server. IMHO that default should be `Bearer`. See issue https://github.com/SignalK/signalk-server-node/issues/715 & PR https://github.com/SignalK/specification/pull/535~~
