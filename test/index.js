@@ -12,7 +12,7 @@ import Client, {
   PERMISSIONS_READONLY
 } from '../src'
 
-import mdns from 'mdns'
+import Bonjour from 'bonjour'
 import { assert } from 'chai'
 import { v4 as uuid } from 'uuid'
 import Server from 'signalk-server'
@@ -399,7 +399,8 @@ describe('Signal K SDK', () => {
   describe('mDNS server discovery', () => {
     it('... Emits an event when a Signal K host is found', done => {
       let found = 0
-      const discovery = new Discovery(mdns, 10000)
+      const bonjour = Bonjour()
+      const discovery = new Discovery(bonjour, 10000)
 
       discovery.once('found', server => {
         found += 1
