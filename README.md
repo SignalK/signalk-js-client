@@ -33,6 +33,7 @@ client = new Client({
   hostname: 'hq.decipher.digital',
   port: 3000,
   useTLS: true,
+  rejectUnauthorized: false, // Optional, set to false only if the server has a self-signed certificate
   useAuthentication: true,
   reconnect: true,
   autoConnect: false,

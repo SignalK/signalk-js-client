@@ -193,7 +193,7 @@ export default class Connection extends EventEmitter {
   }
 
   initiateSocket () {
-    this.socket = new WebSocket(this.wsURI)
+    this.socket = new WebSocket(this.wsURI, (this.options.rejectUnauthorized === false) ? {rejectUnauthorized: false} : {})
     this.socket.addEventListener('message', this.onWSMessage)
     this.socket.addEventListener('open', this.onWSOpen)
     this.socket.addEventListener('error', this.onWSError)
