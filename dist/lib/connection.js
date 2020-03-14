@@ -281,12 +281,12 @@ class Connection extends _eventemitter.default {
       }
     }
 
-    const isObj = data && typeof data === 'object'; // Add token to data IF authenticated
+    const isObj = data && typeof data === 'object'; // FIXME: this shouldn't be required as per discussion about security.
+    // Add token to data IF authenticated
     // https://signalk.org/specification/1.3.0/doc/security.html#other-clients
-
-    if (isObj && this.useAuthentication === true && this._authenticated === true) {
-      data.token = String(this._token.token);
-    }
+    // if (isObj && this.useAuthentication === true && this._authenticated === true) {
+    //   data.token = String(this._token.token)
+    // }
 
     try {
       if (isObj) {
@@ -297,7 +297,8 @@ class Connection extends _eventemitter.default {
     }
 
     debug("Sending data to socket: ".concat(data));
-    this.socket.send(data);
+    const result = this.socket.send(data);
+    return Promise.resolve(result);
   }
 
   fetch(path, opts) {
