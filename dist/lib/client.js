@@ -1,15 +1,21 @@
 "use strict";
 
+require("core-js/modules/es.object.assign");
+
+require("core-js/modules/es.promise");
+
+require("core-js/modules/es.string.includes");
+
+require("core-js/modules/es.string.replace");
+
+require("core-js/modules/es.string.trim");
+
+require("core-js/modules/web.dom-collections.iterator");
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = exports.PERMISSIONS_DENY = exports.PERMISSIONS_READONLY = exports.PERMISSIONS_READWRITE = exports.AUTHENTICATION_REQUEST = exports.NOTIFICATIONS_SUBSCRIPTION = exports.SUBSCRIPTION_NAME = void 0;
-
-require("core-js/modules/es6.symbol");
-
-require("core-js/modules/es6.regexp.replace");
-
-require("core-js/modules/web.dom.iterable");
 
 var _eventemitter = _interopRequireDefault(require("eventemitter3"));
 
@@ -27,7 +33,9 @@ var _uuid = require("uuid");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
@@ -330,7 +338,7 @@ class Client extends _eventemitter.default {
     }
 
     this.api.notifications().then(result => {
-      this.notifications = _objectSpread({}, this.notifications, flattenTree(result));
+      this.notifications = _objectSpread({}, this.notifications, {}, flattenTree(result));
       Object.keys(this.notifications).forEach(path => {
         const notification = _objectSpread({
           path

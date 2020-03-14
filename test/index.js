@@ -39,6 +39,8 @@ const isObject = (mixed, prop, propIsObject) => {
 
 const USER = 'sdk'
 const PASSWORD = 'signalk'
+const BEARER_TOKEN_PREFIX = 'JWT'
+
 let TEST_SERVER_HOSTNAME = process.env.TEST_SERVER_HOSTNAME
 let TEST_SERVER_PORT = process.env.TEST_SERVER_PORT
 let serverApp
@@ -123,7 +125,7 @@ describe('Signal K SDK', () => {
         password: PASSWORD,
         reconnect: false,
         notifications: true,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('connect', () => {
@@ -158,7 +160,7 @@ describe('Signal K SDK', () => {
         password: PASSWORD,
         reconnect: false,
         notifications: true,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('notification', notification => {
@@ -195,7 +197,7 @@ describe('Signal K SDK', () => {
         password: PASSWORD,
         reconnect: false,
         notifications: true,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('notification', notification => {
@@ -229,7 +231,7 @@ describe('Signal K SDK', () => {
     }).timeout(30000)
   })
   
-  describe('On-demand authentication using request/response dynamics', () => {
+  describe('Authentication over WebSockets, using seperate mechanism', () => {
     it('... sends an authentication request with incorrect password, and receives the proper error code', done => {
       const client = new Client({
         hostname: TEST_SERVER_HOSTNAME,
@@ -237,7 +239,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('connect', () => {
@@ -258,11 +260,11 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('connect', () => {
-        client.authenticate(USER, 'signalk')
+        client.authenticate(USER, PASSWORD)
         client.once('authenticated', data => {
           assert(
             data && typeof data === 'object' && data.hasOwnProperty('token')
@@ -281,11 +283,11 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('connect', () => {
-        client.authenticate(USER, 'signalk')
+        client.authenticate(USER, PASSWORD)
         client.once('authenticated', data => {
           client
             .API()
@@ -313,7 +315,7 @@ describe('Signal K SDK', () => {
         password: PASSWORD,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('connect', () => {
@@ -344,16 +346,15 @@ describe('Signal K SDK', () => {
       client.connect()
     }).timeout(15000)
 
-    it('... @FIXME sends a query for a request and receives a well-formed response', done => {
-      done()
-      /* @TODO this is not yet implemented by server, so this test will always fail
+    // @TODO: not yet implemented by Signal K node.js server, so this this would always fail
+    it.skip('... sends a query for a request and receives a well-formed response', done => {
       const client = new Client({
         hostname: TEST_SERVER_HOSTNAME,
         port: TEST_SERVER_PORT,
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       let received = 0
@@ -392,7 +393,6 @@ describe('Signal K SDK', () => {
       })
 
       client.connect()
-      // */
     }).timeout(15000)
   })
 
@@ -430,7 +430,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       const opts = {
@@ -465,7 +465,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       let isDone = false
@@ -495,7 +495,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       let isDone = false
@@ -532,8 +532,7 @@ describe('Signal K SDK', () => {
     }).timeout(30000)
   })
 
-  // @FIXME:
-  // embedded test server doesn't support notifications, so this test will always fail
+  // @TODO: embedded test server doesn't support notifications, so this test will always fail
   describe.skip('Notifications', () => {
     it('... Connects and receives notifications', done => {
       const client = new Client({
@@ -545,7 +544,7 @@ describe('Signal K SDK', () => {
         useAuthentication: true,
         username: USER,
         password: PASSWORD,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.once('notification', notification => {
@@ -575,7 +574,7 @@ describe('Signal K SDK', () => {
         reconnect: false,
         autoConnect: true,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
     })
 
@@ -914,7 +913,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         autoConnect: true,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('connect', () => {
@@ -934,7 +933,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         maxRetries: 10,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('hitMaxRetries', () => {
@@ -952,7 +951,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('error', () => {
@@ -970,7 +969,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('connect', () => {
@@ -988,7 +987,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.connect().catch(() => {
@@ -1004,7 +1003,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.connect().then(() => {
@@ -1020,7 +1019,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('connectionInfo', () => {
@@ -1038,7 +1037,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('self', self => {
@@ -1059,7 +1058,7 @@ describe('Signal K SDK', () => {
         useTLS: false,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('connect', () => {
@@ -1098,7 +1097,7 @@ describe('Signal K SDK', () => {
         password: PASSWORD,
         reconnect: false,
         notifications: false,
-        bearerTokenPrefix: 'JWT'
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
       })
 
       client.on('connect', () => {
@@ -1130,7 +1129,7 @@ describe('Signal K SDK', () => {
         password: PASSWORD,
         reconnect: true,
         notifications: false,
-        bearerTokenPrefix: 'JWT',
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX,
         maxRetries: Infinity
       })
 
@@ -1165,7 +1164,7 @@ describe('Signal K SDK', () => {
         useAuthentication: false,
         reconnect: true,
         notifications: false,
-        bearerTokenPrefix: 'JWT',
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX,
         maxRetries: Infinity
       })
 
