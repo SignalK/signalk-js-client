@@ -275,11 +275,12 @@ export default class Connection extends EventEmitter {
 
     const isObj = (data && typeof data === 'object')
 
+    // FIXME: this shouldn't be required as per discussion about security.
     // Add token to data IF authenticated
     // https://signalk.org/specification/1.3.0/doc/security.html#other-clients
-    if (isObj && this.useAuthentication === true && this._authenticated === true) {
-      data.token = String(this._token.token)
-    }
+    // if (isObj && this.useAuthentication === true && this._authenticated === true) {
+    //   data.token = String(this._token.token)
+    // }
 
     try {
       if (isObj) {
@@ -290,7 +291,8 @@ export default class Connection extends EventEmitter {
     }
 
     debug(`Sending data to socket: ${data}`)
-    this.socket.send(data)
+    const result = this.socket.send(data)
+    return Promise.resolve(result)
   }
 
   fetch (path, opts) {
