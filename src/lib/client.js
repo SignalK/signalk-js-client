@@ -42,6 +42,7 @@ export default class Client extends EventEmitter {
       mdns: null,
       username: null,
       password: null,
+      noUriSubscribeParameter: false,
       ...options
     }
 

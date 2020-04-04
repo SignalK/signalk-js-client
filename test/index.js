@@ -488,6 +488,38 @@ describe('Signal K SDK', () => {
         .catch(err => done(err))
     }).timeout(30000)
 
+// this not checking if parameter is really removed from the uri, test only if process is fonctional 
+    it('... Creates a subscription with noUriSubscribeParameter: true', done => {
+      const client = new Client({
+        hostname: 'demo.signalk.org',
+        port: 80,
+        useTLS: false,
+        reconnect: false,
+        notifications: false,
+        noUriSubscribeParameter: true,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
+      })
+
+      let isDone = false
+
+      client.on('delta', data => {
+        assert(
+          data && typeof data === 'object' && data.hasOwnProperty('updates')
+        )
+        if (isDone === false) {
+          done()
+          isDone = true
+        }
+      })
+
+      client
+        .connect()
+        .then(() => {
+          return client.subscribe()
+        })
+        .catch(err => done(err))
+    }).timeout(30000)
+
     it('... Stops receiving data after unsubscription', done => {
       const client = new Client({
         hostname: 'demo.signalk.org',

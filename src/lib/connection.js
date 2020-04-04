@@ -80,7 +80,8 @@ export default class Connection extends EventEmitter {
     uri += this.options.version
 
     if (protocol === 'ws') {
-      uri += '/stream?subscribe=none'
+      let uriSubscribeParameter = (this.options.noUriSubscribeParameter) ? '' : '?subscribe=none'
+      uri += '/stream' + uriSubscribeParameter
     }
 
     if (protocol === 'http') {
@@ -231,8 +232,12 @@ export default class Connection extends EventEmitter {
   }
 
   _onWSOpen () {
+    debug('[_onWSOpen] called with wsURI:', this.wsURI)
     this.connected = true
     this.isConnecting = false
+    if (this.options.noUriSubscribeParameter) {
+      this.send('{"context": "*","unsubscribe": [{"path": "*"}]}')
+    }
     this.emit('connect')
   }
 

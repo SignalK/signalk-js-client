@@ -23,9 +23,19 @@ let client = null
 client = new Client({
   hostname: 'demo.signalk.org',
   port: 80,
-  useTLS: true,
+  useTLS: false,
   reconnect: true,
   autoConnect: false
+})
+
+// Instantiate client whithout uri subscribe parameter for compatibility with iKommunicate
+client = new Client({
+  hostname: 'demo.signalk.org',
+  port: 80,
+  useTLS: false,
+  reconnect: true,
+  autoConnect: false,
+  noUriSubscribeParameter: true // optional if Signal K server not support /signalk/v1/stream?subscribe=none
 })
 
 // Instantiate client with authentication
