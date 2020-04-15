@@ -203,7 +203,9 @@ class Connection extends _eventemitter.default {
   }
 
   initiateSocket() {
-    this.socket = new _isomorphicWs.default(this.wsURI);
+    this.socket = new _isomorphicWs.default(this.wsURI, this.options.rejectUnauthorized === false ? {
+      rejectUnauthorized: false
+    } : {});
     this.socket.addEventListener('message', this.onWSMessage);
     this.socket.addEventListener('open', this.onWSOpen);
     this.socket.addEventListener('error', this.onWSError);
