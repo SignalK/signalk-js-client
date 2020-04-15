@@ -527,7 +527,7 @@ describe('Signal K SDK', () => {
             if (isDone === false) {
               done()
             }
-          }, 2000)
+          }, 5000)
         })
         .catch(err => done(err))
     }).timeout(30000)

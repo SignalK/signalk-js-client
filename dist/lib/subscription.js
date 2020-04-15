@@ -66,12 +66,10 @@ class Subscription extends _eventemitter.default {
     this.active = false;
     this.connection.removeListener('message', this._listener);
     this.connection.send(JSON.stringify({
-      context: 'vessels.dont_send_me_anything',
-      subscribe: [{
-        path: 'dont_send_me_anything.dont_send_me_anything'
-      }],
-      format: 'delta',
-      policy: 'instant'
+      context: '*',
+      unsubscribe: [{
+        path: '*'
+      }]
     }));
     this.emit('unsubscribe');
     return Promise.resolve(this);
