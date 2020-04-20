@@ -11,7 +11,7 @@ require("core-js/modules/es.string.trim");
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.default = exports.SUPPORTED_STREAM_BEHAVIOUR = void 0;
 
 var _eventemitter = _interopRequireDefault(require("eventemitter3"));
 
@@ -30,9 +30,18 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 const debug = (0, _debug.default)('signalk-js-sdk/Connection');
+const SUPPORTED_STREAM_BEHAVIOUR = {
+  legacy: '',
+  self: 'self',
+  all: 'all',
+  subscription: 'none',
+  none: 'none'
+};
+exports.SUPPORTED_STREAM_BEHAVIOUR = SUPPORTED_STREAM_BEHAVIOUR;
 
 class Connection extends _eventemitter.default {
   constructor(options) {
+    let subscriptions = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
     super();
     this.options = options;
     this.httpURI = this.buildURI('http');
@@ -48,6 +57,7 @@ class Connection extends _eventemitter.default {
     this._retries = 0;
     this._connection = null;
     this._self = '';
+    this._subscriptions = subscriptions;
     this.onWSMessage = this._onWSMessage.bind(this);
     this.onWSOpen = this._onWSOpen.bind(this);
     this.onWSClose = this._onWSClose.bind(this);
@@ -85,14 +95,25 @@ class Connection extends _eventemitter.default {
   }
 
   buildURI(protocol) {
-    let uri = this.options.useTLS === true ? "".concat(protocol, "s://") : "".concat(protocol, "://");
-    uri += this.options.hostname;
-    uri += this.options.port === 80 ? '' : ":".concat(this.options.port);
+    const {
+      useTLS,
+      hostname,
+      port,
+      version,
+      deltaStreamBehaviour
+    } = this.options;
+    let uri = useTLS === true ? "".concat(protocol, "s://") : "".concat(protocol, "://");
+    uri += hostname;
+    uri += port === 80 ? '' : ":".concat(port);
     uri += '/signalk/';
-    uri += this.options.version;
+    uri += version;
 
     if (protocol === 'ws') {
-      uri += '/stream?subscribe=none';
+      uri += '/stream';
+
+      if (SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
+        uri += "?subscribe=".concat(SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]);
+      }
     }
 
     if (protocol === 'http') {
@@ -232,7 +253,7 @@ class Connection extends _eventemitter.default {
         data = JSON.parse(data);
       }
     } catch (e) {
-      console.log("[Connection: ".concat(this.options.hostname, "] Error parsing data: ").concat(e.message));
+      console.error("[Connection: ".concat(this.options.hostname, "] Error parsing data: ").concat(e.message));
     }
 
     if (data && typeof data === 'object' && data.hasOwnProperty('name') && data.hasOwnProperty('version') && data.hasOwnProperty('roles')) {
@@ -245,6 +266,18 @@ class Connection extends _eventemitter.default {
   _onWSOpen() {
     this.connected = true;
     this.isConnecting = false;
+    const {
+      deltaStreamBehaviour,
+      notifications
+    } = this.options;
+
+    if (deltaStreamBehaviour === 'subscription' || deltaStreamBehaviour === 'none' && notifications === true) {
+      const subscriptions = flattenSubscriptions(this._subscriptions);
+      subscriptions.forEach((subscription, index) => {
+        this.send(JSON.stringify(subscription));
+      });
+    }
+
     this.emit('connect');
   }
 
@@ -365,3 +398,40 @@ class Connection extends _eventemitter.default {
 }
 
 exports.default = Connection;
+
+const flattenSubscriptions = subscriptionCommands => {
+  const commandPerContext = {};
+  subscriptionCommands.forEach(command => {
+    if (!Array.isArray(commandPerContext[command.context])) {
+      commandPerContext[command.context] = [];
+    }
+
+    commandPerContext[command.context] = commandPerContext[command.context].concat(command.subscribe);
+  });
+  return Object.keys(commandPerContext).map(context => {
+    const subscription = {
+      context,
+      subscribe: commandPerContext[context]
+    };
+
+    if (subscription.subscribe.length > 0) {
+      const paths = [];
+      subscription.subscribe = subscription.subscribe.reduce((list, command) => {
+        if (!paths.includes(command.path)) {
+          paths.push(command.path);
+        } else {
+          const index = list.findIndex(candidate => candidate.path === command.path);
+
+          if (index !== -1) {
+            list.splice(index, 1);
+          }
+        }
+
+        list.push(command);
+        return list;
+      }, []);
+    }
+
+    return subscription;
+  });
+};

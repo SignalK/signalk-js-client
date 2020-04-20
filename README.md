@@ -2,11 +2,10 @@
 
 [![Build Status](https://travis-ci.org/SignalK/signalk-js-client.svg)](https://travis-ci.org/SignalK/signalk-js-client)
 
-> A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s).
+> A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s).
 
 
 ### INSTALLATION
-This is not yet published on Github. If you'd like to use an early version, use the following command to install the SDK in your project:
 
 ```bash
 [sudo] npm install --save @signalk/client
@@ -30,14 +29,14 @@ client = new Client({
 
 // Instantiate client with authentication
 client = new Client({
-  hostname: 'hq.decipher.digital',
-  port: 3000,
-  useTLS: true,
+  hostname: 'demo.signalk.org',
+  port: 80,
+  useTLS: false,
   rejectUnauthorized: false, // Optional, set to false only if the server has a self-signed certificate
   useAuthentication: true,
   reconnect: true,
   autoConnect: false,
-  username: 'sdk@decipher.industries',
+  username: 'demo@signalk.org',
   password: 'signalk'
 })
 
@@ -64,33 +63,48 @@ discovery.on('found', server => {
   }
 })
 
-// Subscribe to specific paths over WS
-const subscription = {
-  context: 'vessels.self',
-  subscribe: [{ path: 'navigation.position' }]
-}
-
-client
-  .connect()
-  .then(() => client.subscribe(subscription))
-  .catch(err => done(err))
-
-client.on('delta', delta => {
-  // do something with incoming delta message from subscription
+// Delta Stream over WS usage
+// 1. Stream behaviour selection
+client = new Client({
+  hostname: 'demo.signalk.org',
+  port: 80,
+  useTLS: true,
+  reconnect: true,
+  autoConnect: false,
+  notifications: false,
+  // Either "legacy", "self", "all", "none", or "subscription" (see below)
+  // - "legacy" is used to support older server implementations that do not yet support the query string API on the stream endpoint (such as iKommunicate)
+  // - "self" provides a stream of all local data of own vessel
+  // - "all" provides a stream of all data for all vessels
+  // - "none" provides no data over the stream
+  // - "subscription" - see below
+  deltaStreamBehaviour: 'self'
 })
 
-// Subscribe to all paths over WS
-client
-  .connect()
-  .then(() => client.subscribe())
-  .catch(err => done(err))
-
-client.on('delta', delta => {
-  // do something with incoming delta message from subscription
+// 2. Subscribe to specific Signal K paths
+client = new Client({
+  hostname: 'demo.signalk.org',
+  port: 80,
+  useTLS: true,
+  reconnect: true,
+  autoConnect: false,
+  notifications: false,
+  deltaStreamBehaviour: 'subscription',
+  subscription: {
+    context: 'vessels.*',
+    subscribe: [
+      {
+        path: 'navigation.position',
+        policy: 'instant'
+      }
+    ]
+  }
 })
 
-// Unsubscribe
-client.unsubscribe()
+// 3. Listen to the "delta" event to get the stream data
+client.on('delta', (delta) => {
+  // do something with delta
+})
 
 // REST API usage
 // 1. Fetch an entire group
