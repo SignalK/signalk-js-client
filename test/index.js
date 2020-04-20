@@ -722,8 +722,17 @@ describe('Signal K SDK', () => {
       })
 
       client.on('connect', () => {
-        // Force the sending of a notification 
-        client.requestDeviceAccess('Top Secret Client', clientId).catch(err => done(err))
+        setTimeout(() => {
+          // Force the sending of a notification 
+          client
+            .requestDeviceAccess('Top Secret Client', clientId)
+            .catch(err => {
+              console.log('ERROR', err.message)
+              console.log(err.stack)
+
+              done(err)
+            })
+        }, 500)
       })
 
       client.connect()
