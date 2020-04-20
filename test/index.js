@@ -37,6 +37,24 @@ const isObject = (mixed, prop, propIsObject) => {
   return _isObj
 }
 
+const getPathsFromDelta = (delta, paths = []) => {
+  if (!delta || typeof delta !== 'object' || !Array.isArray(delta.updates)) {
+    return paths
+  }
+
+  delta.updates.forEach(update => {
+    if (update && typeof update === 'object' && Array.isArray(update.values)) {
+      update.values.forEach(mut => {
+        if (!paths.includes(mut.path)) {
+          paths.push(mut.path)
+        }
+      })
+    }
+  })
+
+  return paths
+}
+
 const USER = 'sdk'
 const PASSWORD = 'signalk'
 const BEARER_TOKEN_PREFIX = 'JWT'
@@ -431,7 +449,7 @@ describe('Signal K SDK', () => {
   })
   
   describe('Delta stream behaviour & subscriptions', () => {
-    it('... Streams own vessel (self) data when the behaviour is set to "legacy"', done => {
+    it('... Streams own vessel (self) data when the behaviour is set to "null"', done => {
       const client = new Client({
         hostname: 'demo.signalk.org',
         port: 80,
@@ -439,7 +457,7 @@ describe('Signal K SDK', () => {
         reconnect: false,
         notifications: false,
         bearerTokenPrefix: BEARER_TOKEN_PREFIX,
-        deltaStreamBehaviour: 'legacy'
+        deltaStreamBehaviour: null
       })
 
       let count = 0
@@ -534,8 +552,7 @@ describe('Signal K SDK', () => {
         reconnect: false,
         notifications: false,
         bearerTokenPrefix: BEARER_TOKEN_PREFIX,
-        deltaStreamBehaviour: 'subscription',
-        subscription: {
+        subscriptions: [{
           context: 'vessels.self',
           subscribe: [
             {
@@ -543,7 +560,7 @@ describe('Signal K SDK', () => {
               policy: 'instant'
             }
           ]
-        }
+        }]
       })
       
       let count = 0
@@ -596,8 +613,7 @@ describe('Signal K SDK', () => {
         reconnect: false,
         notifications: true,
         bearerTokenPrefix: BEARER_TOKEN_PREFIX,
-        deltaStreamBehaviour: 'subscription',
-        subscription: {
+        subscriptions: [{
           context: 'vessels.*',
           subscribe: [
             {
@@ -605,7 +621,7 @@ describe('Signal K SDK', () => {
               policy: 'instant'
             }
           ]
-        }
+        }]
       })
       
       const pathsFound = []
@@ -647,6 +663,214 @@ describe('Signal K SDK', () => {
 
       client.on('connect', () => {
         client.requestDeviceAccess('Top Secret Client', uuid()).catch(err => done(err))
+      })
+
+      client
+        .connect()
+        .catch(err => done(err))
+    }).timeout(30000)
+
+    it('... Modifies the delta stream subscription after initialisation', done => {
+      const client = new Client({
+        hostname: 'demo.signalk.org',
+        port: 80,
+        useTLS: false,
+        reconnect: false,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
+      })
+      
+      let count = 0
+
+      client.on('delta', data => {
+        count += 1
+
+        if (count < 5) {
+          const findPathInUpdate = (update) => {
+            if (!Array.isArray(update.values)) {
+              return false
+            }
+
+            const found = update.values.find(mut => (mut.path === 'navigation.position'))
+            return (found && typeof found === 'object')
+          }
+
+          let hasPath = false
+
+          try {
+            const search = data.updates.find(findPathInUpdate)
+            hasPath = search && typeof search === 'object'
+          } catch (e) {
+            hasPath = false
+          }
+
+          assert(
+            data &&
+            typeof data === 'object' &&
+            data.hasOwnProperty('updates') &&
+            data.hasOwnProperty('context') &&
+            hasPath &&
+            data.context === client.self
+          )
+        } else if (count === 5) {
+          done()
+        }
+      })
+
+      client.on('connect', () => {
+        client.subscribe({
+          context: 'vessels.self',
+          subscribe: [
+            {
+              path: 'navigation.position',
+              policy: 'instant'
+            }
+          ]
+        })
+      })
+
+      client
+        .connect()
+        .catch(err => done(err))
+    }).timeout(30000)
+
+    it('... Handles multiple subscribe calls correctly', done => {
+      const client = new Client({
+        hostname: 'demo.signalk.org',
+        port: 80,
+        useTLS: false,
+        reconnect: false,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
+      })
+      
+      const paths = []
+      let isDone = false
+
+      client.on('delta', delta => {
+        if (isDone === true) {
+          return
+        }
+
+        isDone = paths.includes('navigation.position') && paths.includes('environment.wind.angleApparent')
+
+        if (isDone === true) {
+          assert(isDone === true)
+          return done()
+        }
+
+        getPathsFromDelta(delta, paths)
+      })
+
+      client.on('connect', () => {
+        client.subscribe({
+          context: 'vessels.self',
+          subscribe: [
+            {
+              path: 'navigation.position',
+              policy: 'instant'
+            }
+          ]
+        })
+
+        client.subscribe({
+          context: 'vessels.self',
+          subscribe: [
+            {
+              path: 'environment.wind.angleApparent',
+              policy: 'instant'
+            }
+          ]
+        })
+      })
+
+      client
+        .connect()
+        .catch(err => done(err))
+    }).timeout(30000)
+
+    it('... Handles subscribes, then unsubscribes', done => {
+      const client = new Client({
+        hostname: 'demo.signalk.org',
+        port: 80,
+        useTLS: false,
+        reconnect: false,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
+      })
+      
+      const paths = []
+      let isDone = false
+      let countAtUnsubscribe = -1
+
+      client.on('delta', delta => {
+        if (isDone === true) {
+          return
+        }
+        
+        getPathsFromDelta(delta, paths)
+
+        if (countAtUnsubscribe === -1 && paths.length > 0) {
+          client.unsubscribe()
+          countAtUnsubscribe = paths.length
+          
+          setTimeout(() => {
+            isDone = true
+            assert(countAtUnsubscribe === paths.length)
+            done()
+          }, 1500)
+        }
+      })
+
+      client.on('connect', () => {
+        client.subscribe({
+          context: 'vessels.self',
+          subscribe: [
+            {
+              path: 'navigation.position',
+              policy: 'instant'
+            }
+          ]
+        })
+      })
+
+      client
+        .connect()
+        .catch(err => done(err))
+    }).timeout(30000)
+
+    it.skip('... @TODO: Unsubscribes, after subscribing using a behaviour modifier (not supported by server)', done => {
+      const client = new Client({
+        hostname: 'demo.signalk.org',
+        port: 80,
+        useTLS: false,
+        reconnect: false,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX,
+        deltaStreamBehaviour: null
+      })
+      
+      const paths = []
+      let isDone = false
+      let countAtUnsubscribe = -1
+
+      client.on('delta', delta => {
+        if (isDone === true) {
+          return
+        }
+        
+        getPathsFromDelta(delta, paths)
+
+        if (countAtUnsubscribe === -1 && paths.length > 0) {
+          client.unsubscribe()
+          countAtUnsubscribe = paths.length
+          
+          setTimeout(() => {
+            isDone = true
+            assert(countAtUnsubscribe === paths.length, `No. of recorded paths (${paths.length}) doesn't match count when unsubscribe() was called (${countAtUnsubscribe})`)
+            done()
+          }, 1500)
+        }
       })
 
       client

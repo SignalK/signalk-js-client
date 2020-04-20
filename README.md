@@ -72,12 +72,11 @@ client = new Client({
   reconnect: true,
   autoConnect: false,
   notifications: false,
-  // Either "legacy", "self", "all", "none", or "subscription" (see below)
-  // - "legacy" is used to support older server implementations that do not yet support the query string API on the stream endpoint (such as iKommunicate)
+  // Either "self", "all", "none", or null (see below)
+  // - null: no behaviour is set for the delta stream, default behaviour is used. Use this option when connecting to older devices that don't support the subscription modifiers per query request. See https://signalk.org/specification/1.4.0/doc/subscription_protocol.html.
   // - "self" provides a stream of all local data of own vessel
   // - "all" provides a stream of all data for all vessels
   // - "none" provides no data over the stream
-  // - "subscription" - see below
   deltaStreamBehaviour: 'self'
 })
 
@@ -89,8 +88,7 @@ client = new Client({
   reconnect: true,
   autoConnect: false,
   notifications: false,
-  deltaStreamBehaviour: 'subscription',
-  subscription: {
+  subscriptions: [{
     context: 'vessels.*',
     subscribe: [
       {
@@ -98,13 +96,27 @@ client = new Client({
         policy: 'instant'
       }
     ]
-  }
+  }]
 })
 
 // 3. Listen to the "delta" event to get the stream data
 client.on('delta', (delta) => {
   // do something with delta
 })
+
+// 4. Modify your subscription parameters. Can be a single object or an array.
+client.subscribe([{
+  context: 'vessels.*',
+  subscribe: [
+    {
+      path: 'navigation.position',
+      policy: 'instant'
+    }
+  ]
+}])
+
+// 5. Unsubscribe from all data paths.
+client.unsubscribe()
 
 // REST API usage
 // 1. Fetch an entire group
@@ -148,20 +160,7 @@ Signal K client for the Angular framework
 [signalk-client-angular](https://github.com/panaaj/signalk-client-angular)
 
 
-### WISHLIST
-- [ ] Expand device access mechanism into its own EventEmitter
-- [ ] Master/slave detection during discovery, with correct selection. Should emit an event if multiple mains+masters are found
-- [ ] Dynamic REST API based on `signalk-schema`, auto-generated tests for each path so client can be used to test-drive servers
-- [ ] Multiple sources for a datapoint/"select" feature
-- [ ] History API support
-- [ ] Port codebase & tests to Typescript
-- [ ] Add an option to spawn a `WebWorker` for each `Connection`, offloading server comms to a different thread
-- [x] Switch mDNS to bonjour (pure JS) implementation
-- [ ] Add a React hook
-
 
 ### NOTES
-- mDNS advert should advertise if server supports TLS
 - Node SK server responds with "Request updated" for access request responses. This is incorrect per spec
 - Node SK server paths for access requests repsponses are not correct to spec (i.e. no /signalk/v1 prefix)
-- ~~Security is implemented, but the token type is currently hardcoded to `JWT` if no `token.type` is returned by a SK server. IMHO that default should be `Bearer`. See issue https://github.com/SignalK/signalk-server-node/issues/715 & PR https://github.com/SignalK/specification/pull/535~~

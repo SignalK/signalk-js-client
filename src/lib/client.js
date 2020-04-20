@@ -39,8 +39,8 @@ export default class Client extends EventEmitter {
       mdns: null,
       username: null,
       password: null,
-      deltaStreamBehaviour: 'self',
-      subscription: null,
+      deltaStreamBehaviour: 'none',
+      subscriptions: [],
       ...options
     }
 
@@ -51,20 +51,18 @@ export default class Client extends EventEmitter {
     this.requests = {}
     this.fetchReady = null
 
-    this.subscribeCommands = this.options.notifications === false ? [] : [{
-      context: 'vessels.self',
-      subscribe: [{
-        path: 'notifications.*',
-        policy: 'instant'
-      }]
-    }]
-
-    if (this.options.deltaStreamBehaviour === 'subscription' && !isValidSubscribeCommand(this.options.subscription)) {
-      throw new Error('No subscription command was provided')
+    if (Array.isArray(this.options.subscriptions)) {
+      this.subscribeCommands = this.options.subscriptions.filter(command => isValidSubscribeCommand(command))
     }
 
-    if (this.options.deltaStreamBehaviour === 'subscription' && isValidSubscribeCommand(this.options.subscription)) {
-      this.subscribeCommands.push(this.options.subscription)
+    if (this.options.notifications === true) {
+      this.subscribeCommands.push({
+        context: 'vessels.self',
+        subscribe: [{
+          path: 'notifications.*',
+          policy: 'instant'
+        }]
+      })
     }
 
     if (this.options.autoConnect === true) {
@@ -89,7 +87,8 @@ export default class Client extends EventEmitter {
     return this.options[key] || null
   }
 
-  // @TODO requesting access should be expanded into a small class to manage the entire flow (including polling)
+  // @TODO: requesting access should be expanded into a small class to
+  // manage the entire flow (including polling)
   requestDeviceAccess (description, _clientId) {
     const clientId = typeof _clientId === 'string' ? _clientId : uuid()
     return this
@@ -159,6 +158,47 @@ export default class Client extends EventEmitter {
     return this.requests[name]
   }
 
+  subscribe (subscriptions = []) {
+    if (this.connection === null) {
+      throw new Error('Not connected')
+    }
+
+    if (subscriptions && !Array.isArray(subscriptions) && typeof subscriptions === 'object' && subscriptions.hasOwnProperty('subscribe')) {
+      subscriptions = [ subscriptions ]
+    }
+
+    subscriptions = subscriptions.filter(command => isValidSubscribeCommand(command))
+    subscriptions.forEach(command => {
+      this.subscribeCommands.push(command)
+    })
+
+    this.connection.subscribe(subscriptions)
+  }
+
+  unsubscribe () {
+    if (this.connection === null) {
+      throw new Error('Not connected')
+    }
+
+    const { notifications } = this.options
+
+    // Reset subscribeCommands
+    this.subscribeCommands = notifications === true ? [{
+      context: 'vessels.self',
+      subscribe: [{
+        path: 'notifications.*',
+        policy: 'instant'
+      }]
+    }] : []
+
+    // Unsubscribe
+    this.connection.unsubscribe()
+
+    if (this.subscribeCommands.length > 0) {
+      this.connection.subscribe(this.subscribeCommands)
+    }
+  }
+
   connect () {
     if (this.connection !== null) {
       this.connection.reconnect(true)
@@ -198,6 +238,7 @@ export default class Client extends EventEmitter {
         this.connection = null
       })
 
+      this.connection.unsubscribe()
       this.connection.disconnect()
     } else {
       this.cleanupListeners()

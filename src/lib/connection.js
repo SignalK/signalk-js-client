@@ -15,10 +15,8 @@ import Debug from 'debug'
 const debug = Debug('signalk-js-sdk/Connection')
 
 export const SUPPORTED_STREAM_BEHAVIOUR = {
-  legacy: '',
   self: 'self',
   all: 'all',
-  subscription: 'none',
   none: 'none'
 }
 
@@ -99,7 +97,8 @@ export default class Connection extends EventEmitter {
     if (protocol === 'ws') {
       uri += '/stream'
 
-      if (SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
+
+      if (deltaStreamBehaviour && SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
         uri += `?subscribe=${SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]}`
       }
     }
@@ -255,18 +254,11 @@ export default class Connection extends EventEmitter {
     this.connected = true
     this.isConnecting = false
 
-    const {
-      deltaStreamBehaviour,
-      notifications
-    } = this.options
-
-    if (deltaStreamBehaviour === 'subscription' || (deltaStreamBehaviour === 'none' && notifications === true)) {
+    if (this._subscriptions.length > 0) {
       const subscriptions = flattenSubscriptions(this._subscriptions)
-      
-      subscriptions.forEach((subscription, index) => {
-        this.send(JSON.stringify(subscription))
-      })
+      this.subscribe(subscriptions)
     }
+
     this.emit('connect')
   }
 
@@ -291,6 +283,25 @@ export default class Connection extends EventEmitter {
 
     this.emit('disconnect', evt)
     this.reconnect()
+  }
+
+  unsubscribe () {
+    this.send(JSON.stringify({
+      context: '*',
+      unsubscribe: [{
+        path: '*'
+      }]
+    }))
+  }
+
+  subscribe (subscriptions = []) {
+    if (!Array.isArray(subscriptions) && subscriptions && typeof subscriptions === 'object' && subscriptions.hasOwnProperty('subscribe')) {
+      subscriptions = [ subscriptions ]
+    }
+
+    subscriptions.forEach(sub => {
+      this.send(JSON.stringify(sub))
+    })
   }
 
   send (data) {
