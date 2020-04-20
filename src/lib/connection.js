@@ -271,12 +271,16 @@ export default class Connection extends EventEmitter {
   _onWSOpen () {
     this.connected = true
     this.isConnecting = false
+<<<<<<< HEAD
 
     if (this._subscriptions.length > 0) {
       const subscriptions = flattenSubscriptions(this._subscriptions)
       this.subscribe(subscriptions)
     }
 
+=======
+    this._retries = 0
+>>>>>>> 0949ecf... Implement reset of no retries
     this.emit('connect')
   }
 
