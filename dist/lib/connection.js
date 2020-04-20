@@ -31,10 +31,8 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
 const debug = (0, _debug.default)('signalk-js-sdk/Connection');
 const SUPPORTED_STREAM_BEHAVIOUR = {
-  legacy: '',
   self: 'self',
   all: 'all',
-  subscription: 'none',
   none: 'none'
 };
 exports.SUPPORTED_STREAM_BEHAVIOUR = SUPPORTED_STREAM_BEHAVIOUR;
@@ -111,7 +109,7 @@ class Connection extends _eventemitter.default {
     if (protocol === 'ws') {
       uri += '/stream';
 
-      if (SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
+      if (deltaStreamBehaviour && SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
         uri += "?subscribe=".concat(SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]);
       }
     }
@@ -266,16 +264,10 @@ class Connection extends _eventemitter.default {
   _onWSOpen() {
     this.connected = true;
     this.isConnecting = false;
-    const {
-      deltaStreamBehaviour,
-      notifications
-    } = this.options;
 
-    if (deltaStreamBehaviour === 'subscription' || deltaStreamBehaviour === 'none' && notifications === true) {
+    if (this._subscriptions.length > 0) {
       const subscriptions = flattenSubscriptions(this._subscriptions);
-      subscriptions.forEach((subscription, index) => {
-        this.send(JSON.stringify(subscription));
-      });
+      this.subscribe(subscriptions);
     }
 
     this.emit('connect');
@@ -300,6 +292,27 @@ class Connection extends _eventemitter.default {
     this._retries += 1;
     this.emit('disconnect', evt);
     this.reconnect();
+  }
+
+  unsubscribe() {
+    this.send(JSON.stringify({
+      context: '*',
+      unsubscribe: [{
+        path: '*'
+      }]
+    }));
+  }
+
+  subscribe() {
+    let subscriptions = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+
+    if (!Array.isArray(subscriptions) && subscriptions && typeof subscriptions === 'object' && subscriptions.hasOwnProperty('subscribe')) {
+      subscriptions = [subscriptions];
+    }
+
+    subscriptions.forEach(sub => {
+      this.send(JSON.stringify(sub));
+    });
   }
 
   send(data) {
