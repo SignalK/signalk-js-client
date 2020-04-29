@@ -26,7 +26,7 @@
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.9.6",
     "@babel/preset-env": "^7.9.6",
-    "@babel/register": "^7.0.0",
+    "@babel/register": "^7.9.0",
     "bonjour": "^3.5.0",
     "casper-chai": "^0.3.0",
     "chai": "^4.1.0",
