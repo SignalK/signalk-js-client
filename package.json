@@ -1,6 +1,6 @@
 {
   "name": "@signalk/client",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "description": "A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s)",
   "main": "index.js",
   "scripts": {
@@ -32,7 +32,7 @@
     "chai": "^4.1.0",
     "freeport-promise": "^1.1.0",
     "mocha": "^6.0.2",
-    "signalk-server": "^1.13.0"
+    "signalk-server": "^1.28.0"
   },
   "repository": {
     "type": "git",

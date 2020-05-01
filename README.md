@@ -2,11 +2,10 @@
 
 [![Build Status](https://travis-ci.org/SignalK/signalk-js-client.svg)](https://travis-ci.org/SignalK/signalk-js-client)
 
-> A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering (via optional mDNS) the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s).
+> A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s).
 
 
 ### INSTALLATION
-This is not yet published on Github. If you'd like to use an early version, use the following command to install the SDK in your project:
 
 ```bash
 [sudo] npm install --save @signalk/client
@@ -30,14 +29,14 @@ client = new Client({
 
 // Instantiate client with authentication
 client = new Client({
-  hostname: 'hq.decipher.digital',
-  port: 3000,
-  useTLS: true,
+  hostname: 'demo.signalk.org',
+  port: 80,
+  useTLS: false,
   rejectUnauthorized: false, // Optional, set to false only if the server has a self-signed certificate
   useAuthentication: true,
   reconnect: true,
   autoConnect: false,
-  username: 'sdk@decipher.industries',
+  username: 'demo@signalk.org',
   password: 'signalk'
 })
 
@@ -64,32 +63,59 @@ discovery.on('found', server => {
   }
 })
 
-// Subscribe to specific paths over WS
-const subscription = {
-  context: 'vessels.self',
-  subscribe: [{ path: 'navigation.position' }]
-}
-
-client
-  .connect()
-  .then(() => client.subscribe(subscription))
-  .catch(err => done(err))
-
-client.on('delta', delta => {
-  // do something with incoming delta message from subscription
+// Delta Stream over WS usage
+// 1. Stream behaviour selection
+client = new Client({
+  hostname: 'demo.signalk.org',
+  port: 80,
+  useTLS: true,
+  reconnect: true,
+  autoConnect: false,
+  notifications: false,
+  // Either "self", "all", "none", or null (see below)
+  // - null: no behaviour is set for the delta stream, default behaviour is used. Use this option when connecting to older devices that don't support the subscription modifiers per query request. See https://signalk.org/specification/1.4.0/doc/subscription_protocol.html.
+  // - "self" provides a stream of all local data of own vessel
+  // - "all" provides a stream of all data for all vessels
+  // - "none" provides no data over the stream
+  deltaStreamBehaviour: 'self'
 })
 
-// Subscribe to all paths over WS
-client
-  .connect()
-  .then(() => client.subscribe())
-  .catch(err => done(err))
-
-client.on('delta', delta => {
-  // do something with incoming delta message from subscription
+// 2. Subscribe to specific Signal K paths
+client = new Client({
+  hostname: 'demo.signalk.org',
+  port: 80,
+  useTLS: true,
+  reconnect: true,
+  autoConnect: false,
+  notifications: false,
+  subscriptions: [{
+    context: 'vessels.*',
+    subscribe: [
+      {
+        path: 'navigation.position',
+        policy: 'instant'
+      }
+    ]
+  }]
 })
 
-// Unsubscribe
+// 3. Listen to the "delta" event to get the stream data
+client.on('delta', (delta) => {
+  // do something with delta
+})
+
+// 4. Modify your subscription parameters. Can be a single object or an array.
+client.subscribe([{
+  context: 'vessels.*',
+  subscribe: [
+    {
+      path: 'navigation.position',
+      policy: 'instant'
+    }
+  ]
+}])
+
+// 5. Unsubscribe from all data paths.
 client.unsubscribe()
 
 // REST API usage
@@ -134,20 +160,7 @@ Signal K client for the Angular framework
 [signalk-client-angular](https://github.com/panaaj/signalk-client-angular)
 
 
-### WISHLIST
-- [ ] Expand device access mechanism into its own EventEmitter
-- [ ] Master/slave detection during discovery, with correct selection. Should emit an event if multiple mains+masters are found
-- [ ] Dynamic REST API based on `signalk-schema`, auto-generated tests for each path so client can be used to test-drive servers
-- [ ] Multiple sources for a datapoint/"select" feature
-- [ ] History API support
-- [ ] Port codebase & tests to Typescript
-- [ ] Add an option to spawn a `WebWorker` for each `Connection`, offloading server comms to a different thread
-- [x] Switch mDNS to bonjour (pure JS) implementation
-- [ ] Add a React hook
-
 
 ### NOTES
-- mDNS advert should advertise if server supports TLS
 - Node SK server responds with "Request updated" for access request responses. This is incorrect per spec
 - Node SK server paths for access requests repsponses are not correct to spec (i.e. no /signalk/v1 prefix)
-- ~~Security is implemented, but the token type is currently hardcoded to `JWT` if no `token.type` is returned by a SK server. IMHO that default should be `Bearer`. See issue https://github.com/SignalK/signalk-server-node/issues/715 & PR https://github.com/SignalK/specification/pull/535~~

@@ -9,7 +9,6 @@
 
 import EventEmitter from 'eventemitter3'
 import Connection from './connection'
-import Subscription from './subscription'
 import Request from './request'
 import API from './api'
 import Debug from 'debug'
@@ -17,10 +16,8 @@ import { v4 as uuid } from 'uuid'
 
 const debug = Debug('signalk-js-sdk/Client')
 
-export const SUBSCRIPTION_NAME = 'default'
-export const NOTIFICATIONS_SUBSCRIPTION = '__NOTIFICATIONS__'
+// Constants
 export const AUTHENTICATION_REQUEST = '__AUTHENTICATION_REQUEST__'
-
 // Permissions for access requests
 export const PERMISSIONS_READWRITE = 'readwrite'
 export const PERMISSIONS_READONLY = 'readonly'
@@ -42,20 +39,43 @@ export default class Client extends EventEmitter {
       mdns: null,
       username: null,
       password: null,
+      deltaStreamBehaviour: 'none',
+      subscriptions: [],
       ...options
     }
 
     this.api = null
     this.connection = null
-    this.subscriptions = {}
     this.services = []
     this.notifications = {}
     this.requests = {}
     this.fetchReady = null
 
+    if (Array.isArray(this.options.subscriptions)) {
+      this.subscribeCommands = this.options.subscriptions.filter(command => isValidSubscribeCommand(command))
+    }
+
+    if (this.options.notifications === true) {
+      this.subscribeCommands.push({
+        context: 'vessels.self',
+        subscribe: [{
+          path: 'notifications.*',
+          policy: 'instant'
+        }]
+      })
+    }
+
     if (this.options.autoConnect === true) {
       this.connect().catch(err => this.emit('error', err))
     }
+  }
+
+  get self () {
+    if (this.connection === null) {
+      return null
+    }
+
+    return this.connection.self
   }
 
   set (key, value) {
@@ -67,7 +87,8 @@ export default class Client extends EventEmitter {
     return this.options[key] || null
   }
 
-  // @TODO requesting access should be expanded into a small class to manage the entire flow (including polling)
+  // @TODO: requesting access should be expanded into a small class to
+  // manage the entire flow (including polling)
   requestDeviceAccess (description, _clientId) {
     const clientId = typeof _clientId === 'string' ? _clientId : uuid()
     return this
@@ -137,6 +158,47 @@ export default class Client extends EventEmitter {
     return this.requests[name]
   }
 
+  subscribe (subscriptions = []) {
+    if (this.connection === null) {
+      throw new Error('Not connected')
+    }
+
+    if (subscriptions && !Array.isArray(subscriptions) && typeof subscriptions === 'object' && subscriptions.hasOwnProperty('subscribe')) {
+      subscriptions = [ subscriptions ]
+    }
+
+    subscriptions = subscriptions.filter(command => isValidSubscribeCommand(command))
+    subscriptions.forEach(command => {
+      this.subscribeCommands.push(command)
+    })
+
+    this.connection.subscribe(subscriptions)
+  }
+
+  unsubscribe () {
+    if (this.connection === null) {
+      throw new Error('Not connected')
+    }
+
+    const { notifications } = this.options
+
+    // Reset subscribeCommands
+    this.subscribeCommands = notifications === true ? [{
+      context: 'vessels.self',
+      subscribe: [{
+        path: 'notifications.*',
+        policy: 'instant'
+      }]
+    }] : []
+
+    // Unsubscribe
+    this.connection.unsubscribe()
+
+    if (this.subscribeCommands.length > 0) {
+      this.connection.subscribe(this.subscribeCommands)
+    }
+  }
+
   connect () {
     if (this.connection !== null) {
       this.connection.reconnect(true)
@@ -144,32 +206,16 @@ export default class Client extends EventEmitter {
     }
 
     return new Promise((resolve, reject) => {
-      this.connection = new Connection(this.options)
+      this.connection = new Connection(this.options, this.subscribeCommands)
 
       this.connection.on('disconnect', data => this.emit('disconnect', data))
-      this.connection.on('message', data => this.emit('message', data))
+      this.connection.on('message', data => this.processWSMessage(data))
       this.connection.on('connectionInfo', data => this.emit('connectionInfo', data))
       this.connection.on('self', data => this.emit('self', data))
       this.connection.on('hitMaxRetries', () => this.emit('hitMaxRetries'))
 
       this.connection.on('connect', () => {
-        if (this.options.notifications === true) {
-          this.subscribeToNotifications()
-        }
-
-        debug(`Connected. ${Object.keys(this.subscriptions).length === 0 ? '' : 'Resubscribing'}`)
-
-        Object.keys(this.subscriptions).forEach(name => {
-          if (name === NOTIFICATIONS_SUBSCRIPTION) {
-            return
-          }
-
-          debug(`Re-subscribing: ${name}`)
-          const sub = this.subscriptions[name].getSubscriptionData()
-          this.unsubscribe(name, false)
-          this.subscribe(sub.options, name)
-        })
-
+        this.getInitialNotifications()
         this.emit('connect')
         resolve(this.connection)
       })
@@ -186,20 +232,13 @@ export default class Client extends EventEmitter {
   }
 
   disconnect (returnPromise = false) {
-    if (Object.keys(this.subscriptions).length > 0) {
-      Object.keys(this.subscriptions).forEach(name => {
-        const subscription = this.subscriptions[name]
-        subscription.unsubscribe()
-        delete this.subscriptions[name]
-      })
-    }
-
     if (this.connection !== null) {
       this.connection.on('disconnect', () => {
         this.cleanupListeners()
         this.connection = null
       })
 
+      this.connection.unsubscribe()
       this.connection.disconnect()
     } else {
       this.cleanupListeners()
@@ -254,60 +293,57 @@ export default class Client extends EventEmitter {
     })
   }
 
-  subscription () {
-    const name = SUBSCRIPTION_NAME
+  processWSMessage (data) {
+    this.emit('message', data)
 
-    if (this.subscriptions.hasOwnProperty(name)) {
-      return this.subscriptions[name]
+    // Check if message is SK delta, then emit.
+    if (data && typeof data === 'object' && data.hasOwnProperty('updates')) {
+      this.checkAndEmitNotificationsInDelta(data)
+      this.emit('delta', data)
     }
-
-    return null
   }
 
-  subscribe (options, identifier) {
-    const name = (typeof identifier === 'string' && identifier.trim() !== '') ? identifier : SUBSCRIPTION_NAME
-
-    if (this.connection === null) {
-      debug('Can\'t subscribe: no connections')
-      return Promise.reject(new Error('There are no available connections. Please connect before subscribe.'))
+  checkAndEmitNotificationsInDelta (delta) {
+    if (this.options.notifications === false || !delta || typeof delta !== 'object' || !Array.isArray(delta.updates)) {
+      return
     }
 
-    if (this.api === null) {
-      this.api = new API(this.connection)
-    }
+    const notifications = {}
 
-    if (this.subscriptions.hasOwnProperty(name) && this.subscriptions[name]) {
-      debug('Can\'t subscribe: subscription exists')
-      return Promise.resolve(this.subscriptions[name])
-    }
+    delta.updates.forEach(update => {
+      update.values.forEach(mut => {
+        if (typeof mut.path === 'string' && mut.path.includes('notifications.')) {
+          notifications[mut.path.replace('notifications.', '')] = {
+            ...mut.value
+          }
+        }
+      })
+    })
 
-    this.subscriptions[name] = new Subscription(this.connection, this.api, options, name)
-    this.subscriptions[name].on('unsubscribe', () => this.emit('unsubscribe'))
-    this.subscriptions[name].on('subscribe', () => this.emit('subscribe', this.subscriptions[name]))
-    this.subscriptions[name].on('delta', (delta) => this.emit('delta', delta))
-    this.subscriptions[name].on('error', err => this.emit('error', err))
+    Object.keys(notifications).forEach(path => {
+      if (!this.notifications.hasOwnProperty(path) || this.notifications[path].timestamp !== notifications[path].timestamp) {
+        this.notifications[path] = {
+          ...notifications[path]
+        }
 
-    return this.subscriptions[name].subscribe()
-  }
-
-  unsubscribe (name, removelisteners = true) {
-    name = name || SUBSCRIPTION_NAME
-    if (this.subscriptions.hasOwnProperty(name) && this.subscriptions[name]) {
-      this.subscriptions[name].unsubscribe()
-      this.subscriptions[name] = null
-      delete this.subscriptions[name]
-
-      if (removelisteners === true) {
-        this.removeAllListeners('subscribe')
-        this.removeAllListeners('unsubscribe')
-        this.removeAllListeners('delta')
+        const notification = {
+          path,
+          ...this.notifications[path]
+        }
+        
+        debug(`[checkAndEmitNotificationsInDelta] emitting notification: ${JSON.stringify(notification, null, 2)}`)
+        this.emit('notification', notification)
       }
-    }
+    })
   }
 
-  subscribeToNotifications () {
+  getInitialNotifications () {
+    if (this.options.notifications === false) {
+      return
+    }
+
     if (this.connection === null) {
-      return Promise.reject(new Error('There are no available connections. Please connect before subscribe.'))
+      return
     }
 
     if (this.api === null) {
@@ -327,75 +363,15 @@ export default class Client extends EventEmitter {
             path,
             ...this.notifications[path]
           }
-          debug(`[subscribeToNotifications] emitting initial notification: ${JSON.stringify(notification, null, 2)}`)
+          debug(`[getInitialNotifications] emitting notification: ${JSON.stringify(notification, null, 2)}`)
           this.emit('notification', notification)
         })
+
+        return this.notifications
       })
       .catch(err => {
-        debug(`[subscribeToNotifications] error getting initial notifications: ${err.message}`)
+        console.error(`[getInitialNotifications] error getting notifications: ${err.message}`)
       })
-
-    if (this.subscriptions.hasOwnProperty(NOTIFICATIONS_SUBSCRIPTION)) {
-      return Promise.resolve(this.subscriptions[NOTIFICATIONS_SUBSCRIPTION])
-    }
-
-    const options = {
-      context: 'vessels.self',
-      subscribe: [{
-        path: 'notifications.*',
-        policy: 'instant'
-      }]
-    }
-
-    this.subscriptions[NOTIFICATIONS_SUBSCRIPTION] = new Subscription(this.connection, this.api, options, NOTIFICATIONS_SUBSCRIPTION)
-    this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].on('unsubscribe', () => this.emit('unsubscribe'))
-    this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].on('subscribe', () => this.emit('subscribe', this.subscriptions[NOTIFICATIONS_SUBSCRIPTION]))
-    this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].on('error', err => this.emit('error', err))
-
-    this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].on('delta', delta => {
-      if (!delta || typeof delta !== 'object') {
-        return
-      }
-
-      if (!Array.isArray(delta.updates)) {
-        return
-      }
-
-      const notifications = {}
-      delta.updates.forEach(update => {
-        if (!Array.isArray(update.values)) {
-          return
-        }
-
-        update.values.forEach(notification => {
-          if (typeof notification.path !== 'string' || !notification.path.includes('notifications.')) {
-            return
-          }
-
-          notifications[notification.path.replace('notifications.', '')] = {
-            ...notification.value
-          }
-        })
-      })
-
-      Object.keys(notifications).forEach(path => {
-        if (!this.notifications.hasOwnProperty(path) || this.notifications[path].timestamp !== notifications[path].timestamp) {
-          this.notifications[path] = {
-            ...notifications[path]
-          }
-
-          const notification = {
-            path,
-            ...this.notifications[path]
-          }
-          
-          debug(`[subscribeToNotifications] emitting notification: ${JSON.stringify(notification, null, 2)}`)
-          this.emit('notification', notification)
-        }
-      })
-    })
-
-    return this.subscriptions[NOTIFICATIONS_SUBSCRIPTION].subscribe()
   }
 }
 
@@ -421,4 +397,16 @@ const flattenTree = (tree) => {
 
   Object.keys(cursor).forEach(key => evaluateLeaf(key))
   return flattened
+}
+
+const isValidSubscribeCommand = (command) => {
+  if (!command || typeof command !== 'object') {
+    return false
+  }
+
+  if (!command.hasOwnProperty('context') || !Array.isArray(command.subscribe)) {
+    return false
+  }
+
+  return true
 }

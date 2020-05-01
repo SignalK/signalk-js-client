@@ -14,8 +14,14 @@ import Debug from 'debug'
 
 const debug = Debug('signalk-js-sdk/Connection')
 
+export const SUPPORTED_STREAM_BEHAVIOUR = {
+  self: 'self',
+  all: 'all',
+  none: 'none'
+}
+
 export default class Connection extends EventEmitter {
-  constructor (options) {
+  constructor (options, subscriptions = []) {
     super()
     this.options = options
     this.httpURI = this.buildURI('http')
@@ -32,6 +38,7 @@ export default class Connection extends EventEmitter {
     this._retries = 0
     this._connection = null
     this._self = ''
+    this._subscriptions = subscriptions
 
     this.onWSMessage = this._onWSMessage.bind(this)
     this.onWSOpen = this._onWSOpen.bind(this)
@@ -72,15 +79,28 @@ export default class Connection extends EventEmitter {
   }
 
   buildURI (protocol) {
-    let uri = this.options.useTLS === true ? `${protocol}s://` : `${protocol}://`
-    uri += this.options.hostname
-    uri += this.options.port === 80 ? '' : `:${this.options.port}`
+    const {
+      useTLS,
+      hostname,
+      port,
+      version,
+      deltaStreamBehaviour
+    } = this.options
+
+    let uri = useTLS === true ? `${protocol}s://` : `${protocol}://`
+    uri += hostname
+    uri += port === 80 ? '' : `:${port}`
 
     uri += '/signalk/'
-    uri += this.options.version
+    uri += version
 
     if (protocol === 'ws') {
-      uri += '/stream?subscribe=none'
+      uri += '/stream'
+
+
+      if (deltaStreamBehaviour && SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
+        uri += `?subscribe=${SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]}`
+      }
     }
 
     if (protocol === 'http') {
@@ -220,7 +240,7 @@ export default class Connection extends EventEmitter {
         data = JSON.parse(data)
       }
     } catch (e) {
-      console.log(`[Connection: ${this.options.hostname}] Error parsing data: ${e.message}`)
+      console.error(`[Connection: ${this.options.hostname}] Error parsing data: ${e.message}`)
     }
 
     if (data && typeof data === 'object' && data.hasOwnProperty('name') && data.hasOwnProperty('version') && data.hasOwnProperty('roles')) {
@@ -233,6 +253,12 @@ export default class Connection extends EventEmitter {
   _onWSOpen () {
     this.connected = true
     this.isConnecting = false
+
+    if (this._subscriptions.length > 0) {
+      const subscriptions = flattenSubscriptions(this._subscriptions)
+      this.subscribe(subscriptions)
+    }
+
     this.emit('connect')
   }
 
@@ -257,6 +283,25 @@ export default class Connection extends EventEmitter {
 
     this.emit('disconnect', evt)
     this.reconnect()
+  }
+
+  unsubscribe () {
+    this.send(JSON.stringify({
+      context: '*',
+      unsubscribe: [{
+        path: '*'
+      }]
+    }))
+  }
+
+  subscribe (subscriptions = []) {
+    if (!Array.isArray(subscriptions) && subscriptions && typeof subscriptions === 'object' && subscriptions.hasOwnProperty('subscribe')) {
+      subscriptions = [ subscriptions ]
+    }
+
+    subscriptions.forEach(sub => {
+      this.send(JSON.stringify(sub))
+    })
   }
 
   send (data) {
@@ -358,4 +403,42 @@ export default class Connection extends EventEmitter {
         return response.text()
       })
   }
+}
+
+const flattenSubscriptions = (subscriptionCommands) => {
+  const commandPerContext = {}
+
+  subscriptionCommands.forEach(command => {
+    if (!Array.isArray(commandPerContext[command.context])) {
+      commandPerContext[command.context] = []
+    }
+
+    commandPerContext[command.context] = commandPerContext[command.context].concat(command.subscribe)
+  })
+
+  return Object.keys(commandPerContext).map(context => {
+    const subscription = {
+      context,
+      subscribe: commandPerContext[context]
+    }
+
+    if (subscription.subscribe.length > 0) {
+      const paths = []
+      subscription.subscribe = subscription.subscribe.reduce((list, command) => {
+        if (!paths.includes(command.path)) {
+          paths.push(command.path)
+        } else {
+          const index = list.findIndex(candidate => (candidate.path === command.path))
+          if (index !== -1) {
+            list.splice(index, 1)
+          }
+        }
+
+        list.push(command)
+        return list
+      }, [])
+    }
+
+    return subscription
+  })
 }
