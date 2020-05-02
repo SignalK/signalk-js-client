@@ -32,7 +32,7 @@
     "chai": "^4.1.0",
     "freeport-promise": "^1.1.0",
     "mocha": "^6.0.2",
-    "signalk-server": "^1.28.0"
+    "signalk-server": "^1.29.0"
   },
   "repository": {
     "type": "git",
