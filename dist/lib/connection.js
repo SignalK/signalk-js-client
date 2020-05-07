@@ -21,6 +21,8 @@ var _crossFetch = _interopRequireDefault(require("cross-fetch"));
 
 var _debug = _interopRequireDefault(require("debug"));
 
+var _https = _interopRequireDefault(require("https"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
@@ -30,6 +32,7 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 const debug = (0, _debug.default)('signalk-js-sdk/Connection');
+const isNode = typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
 const SUPPORTED_STREAM_BEHAVIOUR = {
   self: 'self',
   all: 'all',
@@ -222,9 +225,14 @@ class Connection extends _eventemitter.default {
   }
 
   initiateSocket() {
-    this.socket = new _isomorphicWs.default(this.wsURI, this.options.rejectUnauthorized === false ? {
-      rejectUnauthorized: false
-    } : {});
+    if (isNode && this.options.useTLS && this.options.rejectUnauthorized === false) {
+      this.socket = new _isomorphicWs.default(this.wsURI, {
+        rejectUnauthorized: false
+      });
+    } else {
+      this.socket = new _isomorphicWs.default(this.wsURI);
+    }
+
     this.socket.addEventListener('message', this.onWSMessage);
     this.socket.addEventListener('open', this.onWSOpen);
     this.socket.addEventListener('error', this.onWSError);
@@ -374,6 +382,12 @@ class Connection extends _eventemitter.default {
       opts.credentials = 'same-origin';
       opts.mode = 'cors';
       debug("[fetch] enriching fetch options with in-memory token");
+    }
+
+    if (isNode && this.options.useTLS && this.options.rejectUnauthorized === false) {
+      opts.agent = new _https.default.Agent({
+        rejectUnauthorized: false
+      });
     }
 
     let URI = "".concat(this.httpURI).concat(path); // @TODO httpURI includes /api, which is not desirable. Need to refactor

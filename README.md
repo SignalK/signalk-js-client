@@ -22,7 +22,7 @@ let client = null
 client = new Client({
   hostname: 'demo.signalk.org',
   port: 80,
-  useTLS: true,
+  useTLS: false,
   reconnect: true,
   autoConnect: false
 })
@@ -68,7 +68,7 @@ discovery.on('found', server => {
 client = new Client({
   hostname: 'demo.signalk.org',
   port: 80,
-  useTLS: true,
+  useTLS: false,
   reconnect: true,
   autoConnect: false,
   notifications: false,
@@ -84,7 +84,7 @@ client = new Client({
 client = new Client({
   hostname: 'demo.signalk.org',
   port: 80,
-  useTLS: true,
+  useTLS: false,
   reconnect: true,
   autoConnect: false,
   notifications: false,

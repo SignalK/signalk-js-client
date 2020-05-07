@@ -11,8 +11,14 @@ import EventEmitter from 'eventemitter3'
 import WebSocket from 'isomorphic-ws'
 import fetch from 'cross-fetch'
 import Debug from 'debug'
+import https from 'https'
 
 const debug = Debug('signalk-js-sdk/Connection')
+
+const isNode =
+  typeof process !== 'undefined' &&
+  process.versions != null &&
+  process.versions.node != null
 
 export const SUPPORTED_STREAM_BEHAVIOUR = {
   self: 'self',
@@ -213,7 +219,11 @@ export default class Connection extends EventEmitter {
   }
 
   initiateSocket () {
-    this.socket = new WebSocket(this.wsURI, (this.options.rejectUnauthorized === false) ? {rejectUnauthorized: false} : {})
+    if (isNode && this.options.useTLS && this.options.rejectUnauthorized === false) {
+      this.socket = new WebSocket(this.wsURI, {rejectUnauthorized: false})
+    } else {
+        this.socket = new WebSocket(this.wsURI)
+      }
     this.socket.addEventListener('message', this.onWSMessage)
     this.socket.addEventListener('open', this.onWSOpen)
     this.socket.addEventListener('error', this.onWSError)
@@ -368,6 +378,10 @@ export default class Connection extends EventEmitter {
       opts.mode = 'cors'
 
       debug(`[fetch] enriching fetch options with in-memory token`)
+    }
+
+    if (isNode && this.options.useTLS && this.options.rejectUnauthorized === false) {
+      opts.agent = new https.Agent({rejectUnauthorized:false})
     }
 
     let URI = `${this.httpURI}${path}`
