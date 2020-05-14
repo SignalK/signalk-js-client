@@ -1,6 +1,6 @@
-# Signal K JS Client
+# Signal K JS SDK
 
-[![Build Status](https://travis-ci.org/SignalK/signalk-js-client.svg)](https://travis-ci.org/SignalK/signalk-js-client)
+[![Build Status](https://travis-ci.org/SignalK/signalk-js-client.svg?branch=fabdrol-sdk)](https://travis-ci.org/SignalK/signalk-js-client)
 
 > A Javascript SDK for Signal K clients. Provides various abstract interfaces for discovering the Signal K server and communication via WebSocket & REST. Aims to implement all major APIs in the most recent Signal K version(s).
 
@@ -13,8 +13,8 @@
 
 ### BASIC USAGE
 ```javascript
-import Client, { Discovery } from '@signalk/client'
-import Bonjour from 'bonjour'
+import Client, { Discovery } from '@signalk/signalk-js-sdk'
+import mdns from 'mdns'
 
 let client = null
 
@@ -41,9 +41,8 @@ client = new Client({
 })
 
 // Discover client using mDNS
-// Params: bonjour lib, search time
-const bonjour = Bonjour()
-const discovery = new Discovery(bonjour, 60000)
+// Params: mdns lib, search time
+const discovery = new Discovery(mdns, 60000)
 
 // Timeout fires when search time is up and no servers were found
 discovery.on('timeout', () => console.log('No SK servers found'))
@@ -56,7 +55,6 @@ discovery.on('found', server => {
       useAuthentication: true,
       reconnect: true,
       autoConnect: true,
-      notifications: false,
       username: 'sdk@decipher.industries',
       password: 'signalk'
     })

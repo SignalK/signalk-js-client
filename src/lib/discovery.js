@@ -57,22 +57,19 @@ export class SKServer {
 }
 
 export default class Discovery extends EventEmitter {
-  constructor (bonjour, timeout = 60000) {
+  constructor (mDNS, timeout = 60000) {
     super()
 
-    const props = [ '_server', '_registry' ].join(',')
-
-    if (!bonjour || typeof bonjour !== 'object' || Object.keys(bonjour).join(',') !== props) {
-      throw new Error('Invalid mDNS provider')
+    if (!mDNS || typeof mDNS !== 'object' || !mDNS.hasOwnProperty('createBrowser')) {
+      throw new Error('Invalid mDNS provider given')
     }
 
     this.found = []
-    const browser = bonjour.find({ type: 'signalk-http' })
+    const browser = mDNS.createBrowser(mDNS.tcp('_signalk-http'))
 
-    browser.on('up', ad => {
+    browser.on('serviceUp', ad => {
       const service = {
-        ...ad.txt,
-        name: ad.name || '',
+        ...ad.txtRecord,
         hostname: ad.host || '',
         port: parseInt(ad.port, 10)
       }
