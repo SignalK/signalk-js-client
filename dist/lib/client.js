@@ -1,19 +1,13 @@
 "use strict";
 
-require("core-js/modules/es.object.assign");
-
-require("core-js/modules/es.promise");
-
-require("core-js/modules/es.string.includes");
-
-require("core-js/modules/es.string.replace");
-
-require("core-js/modules/web.dom-collections.iterator");
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = exports.PERMISSIONS_DENY = exports.PERMISSIONS_READONLY = exports.PERMISSIONS_READWRITE = exports.AUTHENTICATION_REQUEST = void 0;
+
+require("core-js/modules/es6.regexp.replace");
+
+require("core-js/modules/web.dom.iterable");
 
 var _eventemitter = _interopRequireDefault(require("eventemitter3"));
 
@@ -142,7 +136,7 @@ class Client extends _eventemitter.default {
 
   respondToAccessRequest(uuid, permissions) {
     let expiration = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '1y';
-    return this.connection.fetch("/security/access/requests/".concat(uuid, "/").concat(permissions === 'denied' ? 'denied' : 'approved'), {
+    return this.connection.fetch(`/security/access/requests/${uuid}/${permissions === 'denied' ? 'denied' : 'approved'}`, {
       method: 'PUT',
       mode: 'cors',
       credentials: 'same-origin',
@@ -172,7 +166,7 @@ class Client extends _eventemitter.default {
         });
       }
 
-      this.emit('error', new Error("Error authenticating: status ".concat(response.statusCode)));
+      this.emit('error', new Error(`Error authenticating: status ${response.statusCode}`));
     });
     request.send();
   }
@@ -182,7 +176,7 @@ class Client extends _eventemitter.default {
 
     if (!this.requests.hasOwnProperty(name)) {
       this.requests[name] = new _request.default(this.connection, name, body);
-      debug("Registered request \"".concat(name, "\" with ID ").concat(this.requests[name].getRequestId()));
+      debug(`Registered request "${name}" with ID ${this.requests[name].getRequestId()}`);
     }
 
     return this.requests[name];
@@ -211,9 +205,7 @@ class Client extends _eventemitter.default {
       throw new Error('Not connected');
     }
 
-    const {
-      notifications
-    } = this.options; // Reset subscribeCommands
+    const notifications = this.options.notifications; // Reset subscribeCommands
 
     this.subscribeCommands = notifications === true ? [{
       context: 'vessels.self',
@@ -351,7 +343,7 @@ class Client extends _eventemitter.default {
           path
         }, this.notifications[path]);
 
-        debug("[checkAndEmitNotificationsInDelta] emitting notification: ".concat(JSON.stringify(notification, null, 2)));
+        debug(`[checkAndEmitNotificationsInDelta] emitting notification: ${JSON.stringify(notification, null, 2)}`);
         this.emit('notification', notification);
       }
     });
@@ -371,18 +363,18 @@ class Client extends _eventemitter.default {
     }
 
     this.api.notifications().then(result => {
-      this.notifications = _objectSpread({}, this.notifications, {}, flattenTree(result));
+      this.notifications = _objectSpread(_objectSpread({}, this.notifications), flattenTree(result));
       Object.keys(this.notifications).forEach(path => {
         const notification = _objectSpread({
           path
         }, this.notifications[path]);
 
-        debug("[getInitialNotifications] emitting notification: ".concat(JSON.stringify(notification, null, 2)));
+        debug(`[getInitialNotifications] emitting notification: ${JSON.stringify(notification, null, 2)}`);
         this.emit('notification', notification);
       });
       return this.notifications;
     }).catch(err => {
-      console.error("[getInitialNotifications] error getting notifications: ".concat(err.message));
+      console.error(`[getInitialNotifications] error getting notifications: ${err.message}`);
     });
   }
 
@@ -396,7 +388,7 @@ const flattenTree = tree => {
   let currentPath = '';
 
   const evaluateLeaf = key => {
-    currentPath += "".concat(currentPath === '' ? '' : '.').concat(key);
+    currentPath += `${currentPath === '' ? '' : '.'}${key}`;
     cursor = cursor[key];
 
     if (!cursor || typeof cursor !== 'object') {

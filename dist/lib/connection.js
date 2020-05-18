@@ -1,17 +1,13 @@
 "use strict";
 
-require("core-js/modules/es.promise");
-
-require("core-js/modules/es.string.includes");
-
-require("core-js/modules/es.string.replace");
-
-require("core-js/modules/es.string.trim");
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = exports.SUPPORTED_STREAM_BEHAVIOUR = void 0;
+
+require("core-js/modules/es6.regexp.replace");
+
+require("core-js/modules/web.dom.iterable");
 
 var _eventemitter = _interopRequireDefault(require("eventemitter3"));
 
@@ -100,16 +96,15 @@ class Connection extends _eventemitter.default {
   }
 
   buildURI(protocol) {
-    const {
-      useTLS,
-      hostname,
-      port,
-      version,
-      deltaStreamBehaviour
-    } = this.options;
-    let uri = useTLS === true ? "".concat(protocol, "s://") : "".concat(protocol, "://");
+    const _this$options = this.options,
+          useTLS = _this$options.useTLS,
+          hostname = _this$options.hostname,
+          port = _this$options.port,
+          version = _this$options.version,
+          deltaStreamBehaviour = _this$options.deltaStreamBehaviour;
+    let uri = useTLS === true ? `${protocol}s://` : `${protocol}://`;
     uri += hostname;
-    uri += port === 80 ? '' : ":".concat(port);
+    uri += port === 80 ? '' : `:${port}`;
     uri += '/signalk/';
     uri += version;
 
@@ -117,7 +112,7 @@ class Connection extends _eventemitter.default {
       uri += '/stream';
 
       if (deltaStreamBehaviour && SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
-        uri += "?subscribe=".concat(SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]);
+        uri += `?subscribe=${SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]}`;
       }
     }
 
@@ -177,7 +172,7 @@ class Connection extends _eventemitter.default {
       return;
     }
 
-    debug("[reconnect] socket is ".concat(this.socket === null ? '' : 'not ', "NULL"));
+    debug(`[reconnect] socket is ${this.socket === null ? '' : 'not '}NULL`);
     this._fetchReady = false;
     this.shouldDisconnect = false;
     this.isConnecting = true;
@@ -200,10 +195,10 @@ class Connection extends _eventemitter.default {
     };
     return this.fetch('/auth/login', authRequest).then(result => {
       if (!result || typeof result !== 'object' || !result.hasOwnProperty('token')) {
-        throw new Error("Unexpected response from auth endpoint: ".concat(JSON.stringify(result)));
+        throw new Error(`Unexpected response from auth endpoint: ${JSON.stringify(result)}`);
       }
 
-      debug("[reconnect] successful auth request: ".concat(JSON.stringify(result, null, 2)));
+      debug(`[reconnect] successful auth request: ${JSON.stringify(result, null, 2)}`);
       this._authenticated = true;
       this._token = {
         kind: typeof result.type === 'string' && result.type.trim() !== '' ? result.type : this._bearerTokenPrefix,
@@ -213,7 +208,7 @@ class Connection extends _eventemitter.default {
       this.emit('fetchReady');
       this.initiateSocket();
     }).catch(err => {
-      debug("[reconnect] error logging in: ".concat(err.message, ", reconnecting"));
+      debug(`[reconnect] error logging in: ${err.message}, reconnecting`);
       this.emit('error', err);
       this._retries += 1;
       this.isConnecting = false;
@@ -248,7 +243,7 @@ class Connection extends _eventemitter.default {
   }
 
   cleanupListeners() {
-    debug("[cleanupListeners] resetting auth and removing listeners"); // Reset authentication
+    debug(`[cleanupListeners] resetting auth and removing listeners`); // Reset authentication
 
     this._authenticated = false;
     this._token = {
@@ -267,7 +262,7 @@ class Connection extends _eventemitter.default {
         data = JSON.parse(data);
       }
     } catch (e) {
-      console.error("[Connection: ".concat(this.options.hostname, "] Error parsing data: ").concat(e.message));
+      console.error(`[Connection: ${this.options.hostname}] Error parsing data: ${e.message}`);
     }
 
     if (data && typeof data === 'object' && data.hasOwnProperty('name') && data.hasOwnProperty('version') && data.hasOwnProperty('roles')) {
@@ -340,7 +335,7 @@ class Connection extends _eventemitter.default {
       try {
         data = JSON.parse(data);
       } catch (e) {
-        debug("[send] data is string but not valid JSON: ".concat(e.message));
+        debug(`[send] data is string but not valid JSON: ${e.message}`);
       }
     }
 
@@ -359,14 +354,14 @@ class Connection extends _eventemitter.default {
       return Promise.reject(e);
     }
 
-    debug("Sending data to socket: ".concat(data));
+    debug(`Sending data to socket: ${data}`);
     const result = this.socket.send(data);
     return Promise.resolve(result);
   }
 
   fetch(path, opts) {
     if (path.charAt(0) !== '/') {
-      path = "/".concat(path);
+      path = `/${path}`;
     }
 
     if (!opts || typeof opts !== 'object') {
@@ -383,12 +378,12 @@ class Connection extends _eventemitter.default {
     }
 
     if (this._authenticated === true && !path.includes('auth/login')) {
-      opts.headers = _objectSpread({}, opts.headers, {
-        Authorization: "".concat(this._token.kind, " ").concat(this._token.token)
+      opts.headers = _objectSpread(_objectSpread({}, opts.headers), {}, {
+        Authorization: `${this._token.kind} ${this._token.token}`
       });
       opts.credentials = 'same-origin';
       opts.mode = 'cors';
-      debug("[fetch] enriching fetch options with in-memory token");
+      debug(`[fetch] enriching fetch options with in-memory token`);
     }
 
     if (isNode && this.options.useTLS && this.options.rejectUnauthorized === false) {
@@ -397,7 +392,7 @@ class Connection extends _eventemitter.default {
       });
     }
 
-    let URI = "".concat(this.httpURI).concat(path); // @TODO httpURI includes /api, which is not desirable. Need to refactor
+    let URI = `${this.httpURI}${path}`; // @TODO httpURI includes /api, which is not desirable. Need to refactor
 
     if (URI.includes('/api/auth/login')) {
       URI = URI.replace('/api/auth/login', '/auth/login');
@@ -413,10 +408,10 @@ class Connection extends _eventemitter.default {
       URI = URI.replace('/signalk/v1/api/security', '/security');
     }
 
-    debug("[fetch] ".concat(opts.method || 'GET', " ").concat(URI, " ").concat(JSON.stringify(opts, null, 2)));
+    debug(`[fetch] ${opts.method || 'GET'} ${URI} ${JSON.stringify(opts, null, 2)}`);
     return (0, _crossFetch.default)(URI, opts).then(response => {
       if (!response.ok) {
-        throw new Error("Error fetching ".concat(URI, ": ").concat(response.status, " ").concat(response.statusText));
+        throw new Error(`Error fetching ${URI}: ${response.status} ${response.statusText}`);
       }
 
       const type = response.headers.get('content-type');

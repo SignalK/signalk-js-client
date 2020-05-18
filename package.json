@@ -29,9 +29,9 @@
     "@babel/register": "^7.0.0",
     "bonjour": "^3.5.0",
     "casper-chai": "^0.3.0",
-    "chai": "^4.1.0",
+    "chai": "^4.2.0",
     "freeport-promise": "^1.1.0",
-    "mocha": "^6.0.2",
+    "mocha": "^6.2.3",
     "signalk-server": "^1.28.0"
   },
   "repository": {
@@ -54,8 +54,6 @@
     ]
   },
   "dependencies": {
-    "@babel/polyfill": "^7.2.5",
-    "core-js": "3",
     "cross-fetch": "^3.0.3",
     "debug": "^4.1.1",
     "eventemitter3": "^4.0.0",

@@ -1,15 +1,11 @@
 "use strict";
 
-require("core-js/modules/es.string.includes");
-
-require("core-js/modules/es.string.replace");
-
-require("core-js/modules/es.string.trim");
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = void 0;
+
+require("core-js/modules/es6.regexp.replace");
 
 /**
  * @description   An API wraps the REST API for a Signal K server
@@ -34,7 +30,7 @@ class API {
     }
 
     if (path.charAt(0) !== '/') {
-      path = "/".concat(path);
+      path = `/${path}`;
     }
 
     return this.connection.fetch(path);
@@ -50,7 +46,7 @@ class API {
     }
 
     if (path.charAt(0) !== '/') {
-      path = "/".concat(path);
+      path = `/${path}`;
     }
 
     return this.connection.fetch(path, {
@@ -116,7 +112,7 @@ class API {
       path = '';
     }
 
-    return this.connection.fetch("/vessels/self".concat(path));
+    return this.connection.fetch(`/vessels/self${path}`);
   }
 
   vessel(mrn, path) {
@@ -124,7 +120,7 @@ class API {
       path = '';
     }
 
-    return this.connection.fetch("/vessels/".concat(mrn).concat(path));
+    return this.connection.fetch(`/vessels/${mrn}${path}`);
   }
 
   name() {
@@ -139,10 +135,10 @@ class API {
     }
 
     if (vessel === 'self') {
-      return this.self("/".concat(group).concat(path));
+      return this.self(`/${group}${path}`);
     }
 
-    return this.vessel(vessel, "/".concat(group).concat(path));
+    return this.vessel(vessel, `/${group}${path}`);
   }
 
   communication() {

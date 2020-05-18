@@ -1,15 +1,13 @@
 "use strict";
 
-require("core-js/modules/es.string.includes");
-
-require("core-js/modules/es.string.split");
-
-require("core-js/modules/es.string.trim");
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = exports.SKServer = void 0;
+
+require("core-js/modules/es6.regexp.split");
+
+require("core-js/modules/web.dom.iterable");
 
 var _eventemitter = _interopRequireDefault(require("eventemitter3"));
 
@@ -62,7 +60,7 @@ class SKServer {
 
   createClient() {
     let opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    return new _client.default(_objectSpread({}, opts, {
+    return new _client.default(_objectSpread(_objectSpread({}, opts), {}, {
       hostname: this._hostname,
       port: this._port
     }));
@@ -87,7 +85,7 @@ class Discovery extends _eventemitter.default {
       type: 'signalk-http'
     });
     browser.on('up', ad => {
-      const service = _objectSpread({}, ad.txt, {
+      const service = _objectSpread(_objectSpread({}, ad.txt), {}, {
         name: ad.name || '',
         hostname: ad.host || '',
         port: parseInt(ad.port, 10)
