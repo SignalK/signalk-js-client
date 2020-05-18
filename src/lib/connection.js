@@ -16,18 +16,16 @@ import https from 'https'
 const debug = Debug('signalk-js-sdk/Connection')
 
 const isNode =
-  typeof process !== 'undefined' &&
-  process.versions != null &&
-  process.versions.node != null
+  typeof process !== 'undefined' && process.versions != null && process.versions.node != null
 
 export const SUPPORTED_STREAM_BEHAVIOUR = {
   self: 'self',
   all: 'all',
-  none: 'none'
+  none: 'none',
 }
 
 export default class Connection extends EventEmitter {
-  constructor (options, subscriptions = []) {
+  constructor(options, subscriptions = []) {
     super()
     this.options = options
     this.httpURI = this.buildURI('http')
@@ -37,7 +35,7 @@ export default class Connection extends EventEmitter {
     this.socket = null
     this.lastMessage = -1
     this.isConnecting = false
-    
+
     this._fetchReady = false
     this._bearerTokenPrefix = this.options.bearerTokenPrefix || 'Bearer'
     this._authenticated = false
@@ -53,13 +51,17 @@ export default class Connection extends EventEmitter {
 
     this._token = {
       kind: '',
-      token: ''
+      token: '',
     }
 
     this.reconnect(true)
   }
 
-  set self (data) {
+  get retries() {
+    return this._retries
+  }
+
+  set self(data) {
     if (data !== null) {
       this.emit('self', data)
     }
@@ -67,11 +69,11 @@ export default class Connection extends EventEmitter {
     this._self = data
   }
 
-  get self () {
+  get self() {
     return this._self
   }
 
-  set connectionInfo (data) {
+  set connectionInfo(data) {
     if (data !== null) {
       this.emit('connectionInfo', data)
     }
@@ -80,18 +82,12 @@ export default class Connection extends EventEmitter {
     this.self = data.self
   }
 
-  get connectionInfo () {
+  get connectionInfo() {
     return this._connection
   }
 
-  buildURI (protocol) {
-    const {
-      useTLS,
-      hostname,
-      port,
-      version,
-      deltaStreamBehaviour
-    } = this.options
+  buildURI(protocol) {
+    const { useTLS, hostname, port, version, deltaStreamBehaviour } = this.options
 
     let uri = useTLS === true ? `${protocol}s://` : `${protocol}://`
     uri += hostname
@@ -103,8 +99,11 @@ export default class Connection extends EventEmitter {
     if (protocol === 'ws') {
       uri += '/stream'
 
-
-      if (deltaStreamBehaviour && SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
+      if (
+        deltaStreamBehaviour &&
+        SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) &&
+        SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== ''
+      ) {
         uri += `?subscribe=${SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]}`
       }
     }
@@ -116,21 +115,21 @@ export default class Connection extends EventEmitter {
     return uri
   }
 
-  state () {
+  state() {
     return {
       connecting: this.isConnecting,
       connected: this.connected,
-      ready: this.fetchReady
+      ready: this.fetchReady,
     }
   }
 
-  disconnect () {
+  disconnect() {
     debug('[disconnect] called')
     this.shouldDisconnect = true
     this.reconnect()
   }
 
-  reconnect (initial = false) {
+  reconnect(initial = false) {
     if (this.isConnecting === true) {
       return
     }
@@ -139,6 +138,10 @@ export default class Connection extends EventEmitter {
       debug('[reconnect] closing socket')
       this.socket.close()
       return
+    }
+
+    if (initial === false) {
+      this._retries += 1
     }
 
     if (initial !== true && this._retries === this.options.maxRetries) {
@@ -178,29 +181,32 @@ export default class Connection extends EventEmitter {
       credentials: 'same-origin',
       body: JSON.stringify({
         username: String(this.options.username || ''),
-        password: String(this.options.password || '')
-      })
+        password: String(this.options.password || ''),
+      }),
     }
 
     return this.fetch('/auth/login', authRequest)
-      .then(result => {
+      .then((result) => {
         if (!result || typeof result !== 'object' || !result.hasOwnProperty('token')) {
           throw new Error(`Unexpected response from auth endpoint: ${JSON.stringify(result)}`)
         }
 
         debug(`[reconnect] successful auth request: ${JSON.stringify(result, null, 2)}`)
-     
+
         this._authenticated = true
         this._token = {
-          kind: (typeof result.type === 'string' && result.type.trim() !== '') ? result.type : this._bearerTokenPrefix,
-          token: result.token
+          kind:
+            typeof result.type === 'string' && result.type.trim() !== ''
+              ? result.type
+              : this._bearerTokenPrefix,
+          token: result.token,
         }
 
         this._fetchReady = true
         this.emit('fetchReady')
         this.initiateSocket()
       })
-      .catch(err => {
+      .catch((err) => {
         debug(`[reconnect] error logging in: ${err.message}, reconnecting`)
         this.emit('error', err)
         this._retries += 1
@@ -209,39 +215,40 @@ export default class Connection extends EventEmitter {
       })
   }
 
-  setAuthenticated (token, kind = 'JWT') { // @FIXME default type should be Bearer
+  setAuthenticated(token, kind = 'JWT') {
+    // @FIXME default type should be Bearer
     this.emit('fetchReady')
     this._authenticated = true
     this._token = {
       kind,
-      token
+      token,
     }
   }
 
-  initiateSocket () {
+  initiateSocket() {
     if (isNode && this.options.useTLS && this.options.rejectUnauthorized === false) {
-      this.socket = new WebSocket(this.wsURI, {rejectUnauthorized: false})
+      this.socket = new WebSocket(this.wsURI, { rejectUnauthorized: false })
     } else {
-        this.socket = new WebSocket(this.wsURI)
-      }
+      this.socket = new WebSocket(this.wsURI)
+    }
     this.socket.addEventListener('message', this.onWSMessage)
     this.socket.addEventListener('open', this.onWSOpen)
     this.socket.addEventListener('error', this.onWSError)
     this.socket.addEventListener('close', this.onWSClose)
   }
 
-  cleanupListeners () {
+  cleanupListeners() {
     debug(`[cleanupListeners] resetting auth and removing listeners`)
     // Reset authentication
     this._authenticated = false
     this._token = {
       kind: '',
-      token: ''
+      token: '',
     }
     this.removeAllListeners()
   }
 
-  _onWSMessage (evt) {
+  _onWSMessage(evt) {
     this.lastMessage = Date.now()
     let data = evt.data
 
@@ -253,14 +260,20 @@ export default class Connection extends EventEmitter {
       console.error(`[Connection: ${this.options.hostname}] Error parsing data: ${e.message}`)
     }
 
-    if (data && typeof data === 'object' && data.hasOwnProperty('name') && data.hasOwnProperty('version') && data.hasOwnProperty('roles')) {
+    if (
+      data &&
+      typeof data === 'object' &&
+      data.hasOwnProperty('name') &&
+      data.hasOwnProperty('version') &&
+      data.hasOwnProperty('roles')
+    ) {
       this.connectionInfo = data
     }
 
     this.emit('message', data)
   }
 
-  _onWSOpen () {
+  _onWSOpen() {
     this.connected = true
     this.isConnecting = false
 
@@ -269,17 +282,17 @@ export default class Connection extends EventEmitter {
       this.subscribe(subscriptions)
     }
 
+    this._retries = 0
     this.emit('connect')
   }
 
-  _onWSError (err) {
+  _onWSError(err) {
     debug('[_onWSError] WS error', err.message || '')
-    this._retries += 1
     this.emit('error', err)
     this.reconnect()
   }
 
-  _onWSClose (evt) {
+  _onWSClose(evt) {
     debug('[_onWSClose] called with wsURI:', this.wsURI)
     this.socket.removeEventListener('message', this.onWSMessage)
     this.socket.removeEventListener('open', this.onWSOpen)
@@ -289,32 +302,40 @@ export default class Connection extends EventEmitter {
     this.connected = false
     this.isConnecting = false
     this.socket = null
-    this._retries += 1
 
     this.emit('disconnect', evt)
     this.reconnect()
   }
 
-  unsubscribe () {
-    this.send(JSON.stringify({
-      context: '*',
-      unsubscribe: [{
-        path: '*'
-      }]
-    }))
+  unsubscribe() {
+    this.send(
+      JSON.stringify({
+        context: '*',
+        unsubscribe: [
+          {
+            path: '*',
+          },
+        ],
+      })
+    )
   }
 
-  subscribe (subscriptions = []) {
-    if (!Array.isArray(subscriptions) && subscriptions && typeof subscriptions === 'object' && subscriptions.hasOwnProperty('subscribe')) {
-      subscriptions = [ subscriptions ]
+  subscribe(subscriptions = []) {
+    if (
+      !Array.isArray(subscriptions) &&
+      subscriptions &&
+      typeof subscriptions === 'object' &&
+      subscriptions.hasOwnProperty('subscribe')
+    ) {
+      subscriptions = [subscriptions]
     }
 
-    subscriptions.forEach(sub => {
+    subscriptions.forEach((sub) => {
       this.send(JSON.stringify(sub))
     })
   }
 
-  send (data) {
+  send(data) {
     if (this.connected !== true || this.socket === null) {
       return Promise.reject(new Error('Not connected to WebSocket'))
     }
@@ -328,7 +349,7 @@ export default class Connection extends EventEmitter {
       }
     }
 
-    const isObj = (data && typeof data === 'object')
+    const isObj = data && typeof data === 'object'
 
     // FIXME: this shouldn't be required as per discussion about security.
     // Add token to data IF authenticated
@@ -350,28 +371,28 @@ export default class Connection extends EventEmitter {
     return Promise.resolve(result)
   }
 
-  fetch (path, opts) {
+  fetch(path, opts) {
     if (path.charAt(0) !== '/') {
       path = `/${path}`
     }
 
     if (!opts || typeof opts !== 'object') {
       opts = {
-        method: 'GET'
+        method: 'GET',
       }
     }
 
     if (!opts.headers || typeof opts.headers !== 'object') {
       opts.headers = {
         Accept: 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       }
     }
 
     if (this._authenticated === true && !path.includes('auth/login')) {
       opts.headers = {
         ...opts.headers,
-        Authorization: `${this._token.kind} ${this._token.token}`
+        Authorization: `${this._token.kind} ${this._token.token}`,
       }
 
       opts.credentials = 'same-origin'
@@ -381,7 +402,7 @@ export default class Connection extends EventEmitter {
     }
 
     if (isNode && this.options.useTLS && this.options.rejectUnauthorized === false) {
-      opts.agent = new https.Agent({rejectUnauthorized:false})
+      opts.agent = new https.Agent({ rejectUnauthorized: false })
     }
 
     let URI = `${this.httpURI}${path}`
@@ -402,38 +423,39 @@ export default class Connection extends EventEmitter {
     }
 
     debug(`[fetch] ${opts.method || 'GET'} ${URI} ${JSON.stringify(opts, null, 2)}`)
-    return fetch(URI, opts)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Error fetching ${URI}: ${response.status} ${response.statusText}`)
-        }
+    return fetch(URI, opts).then((response) => {
+      if (!response.ok) {
+        throw new Error(`Error fetching ${URI}: ${response.status} ${response.statusText}`)
+      }
 
-        const type = response.headers.get('content-type')
+      const type = response.headers.get('content-type')
 
-        if (type.includes('application/json')) {
-          return response.json()
-        }
+      if (type.includes('application/json')) {
+        return response.json()
+      }
 
-        return response.text()
-      })
+      return response.text()
+    })
   }
 }
 
 const flattenSubscriptions = (subscriptionCommands) => {
   const commandPerContext = {}
 
-  subscriptionCommands.forEach(command => {
+  subscriptionCommands.forEach((command) => {
     if (!Array.isArray(commandPerContext[command.context])) {
       commandPerContext[command.context] = []
     }
 
-    commandPerContext[command.context] = commandPerContext[command.context].concat(command.subscribe)
+    commandPerContext[command.context] = commandPerContext[command.context].concat(
+      command.subscribe
+    )
   })
 
-  return Object.keys(commandPerContext).map(context => {
+  return Object.keys(commandPerContext).map((context) => {
     const subscription = {
       context,
-      subscribe: commandPerContext[context]
+      subscribe: commandPerContext[context],
     }
 
     if (subscription.subscribe.length > 0) {
@@ -442,7 +464,7 @@ const flattenSubscriptions = (subscriptionCommands) => {
         if (!paths.includes(command.path)) {
           paths.push(command.path)
         } else {
-          const index = list.findIndex(candidate => (candidate.path === command.path))
+          const index = list.findIndex((candidate) => candidate.path === command.path)
           if (index !== -1) {
             list.splice(index, 1)
           }

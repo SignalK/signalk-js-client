@@ -108,8 +108,15 @@ class Client extends _eventemitter.default {
 
   get(key) {
     return this.options[key] || null;
-  } // @TODO: requesting access should be expanded into a small class to
-  // manage the entire flow (including polling)
+  }
+
+  get retries() {
+    if (this.connection === null) {
+      return 0;
+    }
+
+    return this.connection.retries;
+  } // @TODO requesting access should be expanded into a small class to manage the entire flow (including polling)
 
 
   requestDeviceAccess(description, _clientId) {

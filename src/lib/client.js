@@ -24,7 +24,7 @@ export const PERMISSIONS_READONLY = 'readonly'
 export const PERMISSIONS_DENY = 'denied'
 
 export default class Client extends EventEmitter {
-  constructor (options = {}) {
+  constructor(options = {}) {
     super()
     this.options = {
       hostname: 'localhost',
@@ -41,7 +41,7 @@ export default class Client extends EventEmitter {
       password: null,
       deltaStreamBehaviour: 'none',
       subscriptions: [],
-      ...options
+      ...options,
     }
 
     this.api = null
@@ -52,25 +52,29 @@ export default class Client extends EventEmitter {
     this.fetchReady = null
 
     if (Array.isArray(this.options.subscriptions)) {
-      this.subscribeCommands = this.options.subscriptions.filter(command => isValidSubscribeCommand(command))
+      this.subscribeCommands = this.options.subscriptions.filter((command) =>
+        isValidSubscribeCommand(command)
+      )
     }
 
     if (this.options.notifications === true) {
       this.subscribeCommands.push({
         context: 'vessels.self',
-        subscribe: [{
-          path: 'notifications.*',
-          policy: 'instant'
-        }]
+        subscribe: [
+          {
+            path: 'notifications.*',
+            policy: 'instant',
+          },
+        ],
       })
     }
 
     if (this.options.autoConnect === true) {
-      this.connect().catch(err => this.emit('error', err))
+      this.connect().catch((err) => this.emit('error', err))
     }
   }
 
-  get self () {
+  get self() {
     if (this.connection === null) {
       return null
     }
@@ -78,21 +82,27 @@ export default class Client extends EventEmitter {
     return this.connection.self
   }
 
-  set (key, value) {
+  set(key, value) {
     this.options[key] = value
     return this
   }
 
-  get (key) {
+  get(key) {
     return this.options[key] || null
   }
 
-  // @TODO: requesting access should be expanded into a small class to
-  // manage the entire flow (including polling)
-  requestDeviceAccess (description, _clientId) {
+  get retries() {
+    if (this.connection === null) {
+      return 0
+    }
+
+    return this.connection.retries
+  }
+
+  // @TODO requesting access should be expanded into a small class to manage the entire flow (including polling)
+  requestDeviceAccess(description, _clientId) {
     const clientId = typeof _clientId === 'string' ? _clientId : uuid()
-    return this
-      .connection
+    return this.connection
       .fetch('/access/requests', {
         method: 'POST',
         mode: 'cors',
@@ -100,46 +110,53 @@ export default class Client extends EventEmitter {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId,
-          description
-        })
+          description,
+        }),
       })
-      .then(response => {
+      .then((response) => {
         return {
           clientId,
-          response
+          response,
         }
       })
   }
 
-  respondToAccessRequest (uuid, permissions, expiration = '1y') {
-    return this.connection
-      .fetch(`/security/access/requests/${uuid}/${permissions === 'denied' ? 'denied' : 'approved'}`, {
+  respondToAccessRequest(uuid, permissions, expiration = '1y') {
+    return this.connection.fetch(
+      `/security/access/requests/${uuid}/${permissions === 'denied' ? 'denied' : 'approved'}`,
+      {
         method: 'PUT',
         mode: 'cors',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           expiration,
-          permissions
-        })
-      })
+          permissions,
+        }),
+      }
+    )
   }
 
-  authenticate (username, password) {
+  authenticate(username, password) {
     const request = this.request(AUTHENTICATION_REQUEST, {
       login: {
         username,
-        password
-      }
+        password,
+      },
     })
 
-    request.on('response', response => {
-      if (response.statusCode === 200 && response.hasOwnProperty('login') && typeof response.login === 'object' && response.login.hasOwnProperty('token')) {
+    request.on('response', (response) => {
+      if (
+        response.statusCode === 200 &&
+        response.hasOwnProperty('login') &&
+        typeof response.login === 'object' &&
+        response.login.hasOwnProperty('token')
+      ) {
         this.connection.setAuthenticated(response.login.token)
-        
+
         // We are now authenticated
         return this.emit('authenticated', {
-          token: response.login.token
+          token: response.login.token,
         })
       }
 
@@ -149,7 +166,7 @@ export default class Client extends EventEmitter {
     request.send()
   }
 
-  request (name, body = {}) {
+  request(name, body = {}) {
     if (!this.requests.hasOwnProperty(name)) {
       this.requests[name] = new Request(this.connection, name, body)
       debug(`Registered request "${name}" with ID ${this.requests[name].getRequestId()}`)
@@ -158,24 +175,29 @@ export default class Client extends EventEmitter {
     return this.requests[name]
   }
 
-  subscribe (subscriptions = []) {
+  subscribe(subscriptions = []) {
     if (this.connection === null) {
       throw new Error('Not connected')
     }
 
-    if (subscriptions && !Array.isArray(subscriptions) && typeof subscriptions === 'object' && subscriptions.hasOwnProperty('subscribe')) {
-      subscriptions = [ subscriptions ]
+    if (
+      subscriptions &&
+      !Array.isArray(subscriptions) &&
+      typeof subscriptions === 'object' &&
+      subscriptions.hasOwnProperty('subscribe')
+    ) {
+      subscriptions = [subscriptions]
     }
 
-    subscriptions = subscriptions.filter(command => isValidSubscribeCommand(command))
-    subscriptions.forEach(command => {
+    subscriptions = subscriptions.filter((command) => isValidSubscribeCommand(command))
+    subscriptions.forEach((command) => {
       this.subscribeCommands.push(command)
     })
 
     this.connection.subscribe(subscriptions)
   }
 
-  unsubscribe () {
+  unsubscribe() {
     if (this.connection === null) {
       throw new Error('Not connected')
     }
@@ -183,13 +205,20 @@ export default class Client extends EventEmitter {
     const { notifications } = this.options
 
     // Reset subscribeCommands
-    this.subscribeCommands = notifications === true ? [{
-      context: 'vessels.self',
-      subscribe: [{
-        path: 'notifications.*',
-        policy: 'instant'
-      }]
-    }] : []
+    this.subscribeCommands =
+      notifications === true
+        ? [
+            {
+              context: 'vessels.self',
+              subscribe: [
+                {
+                  path: 'notifications.*',
+                  policy: 'instant',
+                },
+              ],
+            },
+          ]
+        : []
 
     // Unsubscribe
     this.connection.unsubscribe()
@@ -199,7 +228,7 @@ export default class Client extends EventEmitter {
     }
   }
 
-  connect () {
+  connect() {
     if (this.connection !== null) {
       this.connection.reconnect(true)
       return Promise.resolve(this.connection)
@@ -208,10 +237,10 @@ export default class Client extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.connection = new Connection(this.options, this.subscribeCommands)
 
-      this.connection.on('disconnect', data => this.emit('disconnect', data))
-      this.connection.on('message', data => this.processWSMessage(data))
-      this.connection.on('connectionInfo', data => this.emit('connectionInfo', data))
-      this.connection.on('self', data => this.emit('self', data))
+      this.connection.on('disconnect', (data) => this.emit('disconnect', data))
+      this.connection.on('message', (data) => this.processWSMessage(data))
+      this.connection.on('connectionInfo', (data) => this.emit('connectionInfo', data))
+      this.connection.on('self', (data) => this.emit('self', data))
       this.connection.on('hitMaxRetries', () => this.emit('hitMaxRetries'))
 
       this.connection.on('connect', () => {
@@ -224,14 +253,14 @@ export default class Client extends EventEmitter {
         this.fetchReady = true
       })
 
-      this.connection.on('error', err => {
+      this.connection.on('error', (err) => {
         this.emit('error', err)
         reject(err)
       })
     })
   }
 
-  disconnect (returnPromise = false) {
+  disconnect(returnPromise = false) {
     if (this.connection !== null) {
       this.connection.on('disconnect', () => {
         this.cleanupListeners()
@@ -255,7 +284,7 @@ export default class Client extends EventEmitter {
     return this
   }
 
-  cleanupListeners () {
+  cleanupListeners() {
     this.removeAllListeners('self')
     this.removeAllListeners('connectionInfo')
     this.removeAllListeners('message')
@@ -268,12 +297,14 @@ export default class Client extends EventEmitter {
     this.removeAllListeners('subscribe')
   }
 
-  API () {
+  API() {
     // Returning a Promise, so this method can be used as the start of a promise chain.
     // I.e., all API methods return Promises, so it makes sense to start the Promise
     // chain at the top.
     if (this.connection === null) {
-      return Promise.reject(new Error('There are no available connections. Please connect before you use the REST API.'))
+      return Promise.reject(
+        new Error('There are no available connections. Please connect before you use the REST API.')
+      )
     }
 
     if (this.api !== null) {
@@ -293,7 +324,7 @@ export default class Client extends EventEmitter {
     })
   }
 
-  processWSMessage (data) {
+  processWSMessage(data) {
     this.emit('message', data)
 
     // Check if message is SK delta, then emit.
@@ -303,41 +334,55 @@ export default class Client extends EventEmitter {
     }
   }
 
-  checkAndEmitNotificationsInDelta (delta) {
-    if (this.options.notifications === false || !delta || typeof delta !== 'object' || !Array.isArray(delta.updates)) {
+  checkAndEmitNotificationsInDelta(delta) {
+    if (
+      this.options.notifications === false ||
+      !delta ||
+      typeof delta !== 'object' ||
+      !Array.isArray(delta.updates)
+    ) {
       return
     }
 
     const notifications = {}
 
-    delta.updates.forEach(update => {
-      update.values.forEach(mut => {
+    delta.updates.forEach((update) => {
+      update.values.forEach((mut) => {
         if (typeof mut.path === 'string' && mut.path.includes('notifications.')) {
           notifications[mut.path.replace('notifications.', '')] = {
-            ...mut.value
+            ...mut.value,
           }
         }
       })
     })
 
-    Object.keys(notifications).forEach(path => {
-      if (!this.notifications.hasOwnProperty(path) || this.notifications[path].timestamp !== notifications[path].timestamp) {
+    Object.keys(notifications).forEach((path) => {
+      if (
+        !this.notifications.hasOwnProperty(path) ||
+        this.notifications[path].timestamp !== notifications[path].timestamp
+      ) {
         this.notifications[path] = {
-          ...notifications[path]
+          ...notifications[path],
         }
 
         const notification = {
           path,
-          ...this.notifications[path]
+          ...this.notifications[path],
         }
-        
-        debug(`[checkAndEmitNotificationsInDelta] emitting notification: ${JSON.stringify(notification, null, 2)}`)
+
+        debug(
+          `[checkAndEmitNotificationsInDelta] emitting notification: ${JSON.stringify(
+            notification,
+            null,
+            2
+          )}`
+        )
         this.emit('notification', notification)
       }
     })
   }
 
-  getInitialNotifications () {
+  getInitialNotifications() {
     if (this.options.notifications === false) {
       return
     }
@@ -352,24 +397,30 @@ export default class Client extends EventEmitter {
 
     this.api
       .notifications()
-      .then(result => {
+      .then((result) => {
         this.notifications = {
           ...this.notifications,
-          ...flattenTree(result)
+          ...flattenTree(result),
         }
 
-        Object.keys(this.notifications).forEach(path => {
+        Object.keys(this.notifications).forEach((path) => {
           const notification = {
             path,
-            ...this.notifications[path]
+            ...this.notifications[path],
           }
-          debug(`[getInitialNotifications] emitting notification: ${JSON.stringify(notification, null, 2)}`)
+          debug(
+            `[getInitialNotifications] emitting notification: ${JSON.stringify(
+              notification,
+              null,
+              2
+            )}`
+          )
           this.emit('notification', notification)
         })
 
         return this.notifications
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(`[getInitialNotifications] error getting notifications: ${err.message}`)
       })
   }
@@ -395,7 +446,7 @@ const flattenTree = (tree) => {
     }
   }
 
-  Object.keys(cursor).forEach(key => evaluateLeaf(key))
+  Object.keys(cursor).forEach((key) => evaluateLeaf(key))
   return flattened
 }
 
