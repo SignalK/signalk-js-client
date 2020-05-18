@@ -1323,7 +1323,25 @@ describe('Signal K SDK', () => {
       })
     })
 
-    it('... Reconnects after a fail or close until maxRetries is reached, at which point an event is emitted', done => {
+    it('... Reconnects after a connection failure until (odd) maxRetries is reached, at which point an event is emitted', done => {
+      const client = new Client({
+        hostname: 'poo.signalk.org',
+        port: 80,
+        useTLS: false,
+        maxRetries: 11,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX
+      })
+
+      client.on('hitMaxRetries', () => {
+        assert(client.retries === 11)
+        done()
+      })
+
+      client.connect().catch(() => {})
+    }).timeout(60000)
+
+    it('... Reconnects after a connection failure until (even) maxRetries is reached, at which point an event is emitted', done => {
       const client = new Client({
         hostname: 'poo.signalk.org',
         port: 80,
@@ -1334,7 +1352,7 @@ describe('Signal K SDK', () => {
       })
 
       client.on('hitMaxRetries', () => {
-        assert(true)
+        assert(client.retries === 10)
         done()
       })
 

@@ -70,6 +70,10 @@ class Connection extends _eventemitter.default {
     this.reconnect(true);
   }
 
+  get retries() {
+    return this._retries;
+  }
+
   set self(data) {
     if (data !== null) {
       this.emit('self', data);
@@ -149,6 +153,10 @@ class Connection extends _eventemitter.default {
       debug('[reconnect] closing socket');
       this.socket.close();
       return;
+    }
+
+    if (initial === false) {
+      this._retries += 1;
     }
 
     if (initial !== true && this._retries === this.options.maxRetries) {
@@ -283,7 +291,6 @@ class Connection extends _eventemitter.default {
 
   _onWSError(err) {
     debug('[_onWSError] WS error', err.message || '');
-    this._retries += 1;
     this.emit('error', err);
     this.reconnect();
   }
@@ -297,7 +304,6 @@ class Connection extends _eventemitter.default {
     this.connected = false;
     this.isConnecting = false;
     this.socket = null;
-    this._retries += 1;
     this.emit('disconnect', evt);
     this.reconnect();
   }

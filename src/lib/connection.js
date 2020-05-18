@@ -59,6 +59,10 @@ export default class Connection extends EventEmitter {
     this.reconnect(true)
   }
 
+  get retries () {
+    return this._retries
+  }
+
   set self (data) {
     if (data !== null) {
       this.emit('self', data)
@@ -139,6 +143,10 @@ export default class Connection extends EventEmitter {
       debug('[reconnect] closing socket')
       this.socket.close()
       return
+    }
+
+    if (initial === false) {
+      this._retries += 1
     }
 
     if (initial !== true && this._retries === this.options.maxRetries) {
@@ -274,7 +282,6 @@ export default class Connection extends EventEmitter {
 
   _onWSError (err) {
     debug('[_onWSError] WS error', err.message || '')
-    this._retries += 1
     this.emit('error', err)
     this.reconnect()
   }
@@ -289,7 +296,6 @@ export default class Connection extends EventEmitter {
     this.connected = false
     this.isConnecting = false
     this.socket = null
-    this._retries += 1
 
     this.emit('disconnect', evt)
     this.reconnect()
