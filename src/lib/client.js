@@ -35,7 +35,7 @@ export default class Client extends EventEmitter {
       version: 'v1',
       autoConnect: false,
       reconnect: true,
-      maxRetries: 100,
+      maxRetries: 10,
       mdns: null,
       username: null,
       password: null,
@@ -242,6 +242,9 @@ export default class Client extends EventEmitter {
       this.connection.on('connectionInfo', (data) => this.emit('connectionInfo', data))
       this.connection.on('self', (data) => this.emit('self', data))
       this.connection.on('hitMaxRetries', () => this.emit('hitMaxRetries'))
+      this.connection.on('backOffBeforeReconnect', (data) =>
+        this.emit('backOffBeforeReconnect', data)
+      )
 
       this.connection.on('connect', () => {
         this.getInitialNotifications()
@@ -292,6 +295,7 @@ export default class Client extends EventEmitter {
     this.removeAllListeners('connect')
     this.removeAllListeners('error')
     this.removeAllListeners('hitMaxRetries')
+    this.removeAllListeners('backOffBeforeReconnect')
     this.removeAllListeners('disconnect')
     this.removeAllListeners('unsubscribe')
     this.removeAllListeners('subscribe')

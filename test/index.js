@@ -419,6 +419,7 @@ describe('Signal K SDK', () => {
 
   describe('mDNS server discovery', () => {
     !process.env.TRAVIS &&
+<<<<<<< HEAD
       it('... Emits an event when a Signal K host is found, using mDNS', (done) => {
         let found = 0
         const discovery = new Discovery(mdns, 10000)
@@ -445,6 +446,9 @@ describe('Signal K SDK', () => {
 
     !process.env.TRAVIS &&
       it('... Emits an event when a Signal K host is found, using Bonjour', (done) => {
+=======
+      it('... Emits an event when a Signal K host is found', (done) => {
+>>>>>>> 6d9c4e8... Implement back-off policy, more relevant maxRetries default
         let found = 0
         const bonjour = Bonjour()
         const discovery = new Discovery(bonjour, 10000)
@@ -877,11 +881,19 @@ describe('Signal K SDK', () => {
           }
 
           getPathsFromDelta(delta, paths)
+<<<<<<< HEAD
 
           if (countAtUnsubscribe === -1 && paths.length > 0) {
             client.unsubscribe()
             countAtUnsubscribe = paths.length
 
+=======
+
+          if (countAtUnsubscribe === -1 && paths.length > 0) {
+            client.unsubscribe()
+            countAtUnsubscribe = paths.length
+
+>>>>>>> 6d9c4e8... Implement back-off policy, more relevant maxRetries default
             setTimeout(() => {
               isDone = true
               assert(
@@ -1364,9 +1376,34 @@ describe('Signal K SDK', () => {
         maxRetries: 10,
         notifications: false,
         bearerTokenPrefix: BEARER_TOKEN_PREFIX,
+<<<<<<< HEAD
+=======
       })
 
       client.on('hitMaxRetries', () => {
+        assert(client.retries === 10)
+        done()
+>>>>>>> 6d9c4e8... Implement back-off policy, more relevant maxRetries default
+      })
+
+      client.connect().catch(() => {})
+    }).timeout(60000)
+
+    it('... Reconnects after a connection failure, with progressive back-off behaviour', (done) => {
+      const client = new Client({
+        hostname: 'poo.signalk.org',
+        port: 80,
+        useTLS: false,
+        maxRetries: 10,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX,
+      })
+
+      const waitTimes = []
+      client.on('backOffBeforeReconnect', (waitTime) => waitTimes.push(waitTime))
+
+      client.on('hitMaxRetries', () => {
+        assert.deepEqual(waitTimes, [250, 500, 750, 1000, 1250, 1500, 1750, 2000, 2250])
         assert(client.retries === 10)
         done()
       })

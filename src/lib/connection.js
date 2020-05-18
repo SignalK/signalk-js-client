@@ -129,6 +129,23 @@ export default class Connection extends EventEmitter {
     this.reconnect()
   }
 
+  backOffAndReconnect() {
+    if (this.isConnecting === true) {
+      return
+    }
+
+    const waitTime = this._retries * 250
+
+    if (waitTime === 0) {
+      return this.reconnect()
+    }
+
+    this.emit('backOffBeforeReconnect', waitTime)
+
+    debug(`[backOffAndReconnect] waiting ${waitTime} ms before reconnecting`)
+    setTimeout(() => this.reconnect(), waitTime)
+  }
+
   reconnect(initial = false) {
     if (this.isConnecting === true) {
       return
@@ -211,7 +228,7 @@ export default class Connection extends EventEmitter {
         this.emit('error', err)
         this._retries += 1
         this.isConnecting = false
-        return this.reconnect()
+        return this.backOffAndReconnect()
       })
   }
 
@@ -289,7 +306,7 @@ export default class Connection extends EventEmitter {
   _onWSError(err) {
     debug('[_onWSError] WS error', err.message || '')
     this.emit('error', err)
-    this.reconnect()
+    this.backOffAndReconnect()
   }
 
   _onWSClose(evt) {
@@ -304,7 +321,7 @@ export default class Connection extends EventEmitter {
     this.socket = null
 
     this.emit('disconnect', evt)
-    this.reconnect()
+    this.backOffAndReconnect()
   }
 
   unsubscribe() {
