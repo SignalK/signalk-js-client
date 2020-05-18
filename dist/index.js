@@ -3,13 +3,13 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = exports.Discovery = exports.Client = void 0;
+exports["default"] = exports.Discovery = exports.Client = void 0;
 
 var _client = _interopRequireDefault(require("./lib/client"));
 
 var _discovery = _interopRequireDefault(require("./lib/discovery"));
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
 /**
  * @author        Fabian Tollenaar <fabian@decipher.industries>
@@ -17,9 +17,9 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  * @license       Apache-2.0
  * @module        @signalk/signalk-js-sdk
  */
-const Client = _client.default;
+var Client = _client["default"];
 exports.Client = Client;
-const Discovery = _discovery.default;
+var Discovery = _discovery["default"];
 exports.Discovery = Discovery;
-var _default = _client.default;
-exports.default = _default;
+var _default = _client["default"];
+exports["default"] = _default;
