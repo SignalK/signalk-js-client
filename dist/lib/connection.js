@@ -383,7 +383,7 @@ class Connection extends _eventemitter.default {
     }
 
     if (this._authenticated === true && !path.includes('auth/login')) {
-      opts.headers = _objectSpread({}, opts.headers, {
+      opts.headers = _objectSpread(_objectSpread({}, opts.headers), {}, {
         Authorization: "".concat(this._token.kind, " ").concat(this._token.token)
       });
       opts.credentials = 'same-origin';
