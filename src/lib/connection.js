@@ -134,11 +134,9 @@ export default class Connection extends EventEmitter {
       return
     }
 
-    let waitTime = this._retries * 250
+    const { maxTimeBetweenRetries } = this.options
 
-    if (waitTime > this.options.maxTimeBetweenRetries) {
-      waitTime = this.options.maxTimeBetweenRetries
-    }
+    let waitTime = this._retries < Math.round(maxTimeBetweenRetries / 250) ? this._retries * 250 : maxTimeBetweenRetries
 
     if (waitTime === 0) {
       return this.reconnect()
