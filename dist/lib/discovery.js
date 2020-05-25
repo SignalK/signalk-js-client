@@ -102,43 +102,12 @@ class Discovery extends _eventemitter.default {
     const browser = bonjour.find({
       type: 'signalk-http'
     });
-    browser.on('up', ad => {
-      const service = _objectSpread(_objectSpread({}, ad.txt), {}, {
-        name: ad.name || '',
-        hostname: ad.host || '',
-        port: parseInt(ad.port, 10),
-        provider: 'bonjour'
-      });
-
-      if (service.hasOwnProperty('roles') && typeof service.roles === 'string' && service.roles.includes(',')) {
-        service.roles = service.roles.split(',').map(role => role.trim().toLowerCase());
-      }
-
-      if (service.hasOwnProperty('roles') && typeof service.roles === 'string' && !service.roles.includes(',')) {
-        service.roles = [service.roles].map(role => role.trim().toLowerCase());
-      }
-
-      let ipv4 = service.hostname;
-
-      if (Array.isArray(ad.addresses)) {
-        ipv4 = ad.addresses.reduce((found, address) => {
-          if (address && typeof address === 'string' && address.includes('.')) {
-            found = address;
-          }
-
-          return found;
-        }, service.hostname);
-      }
-
-      if (ipv4.trim() !== '') {
-        service.hostname = ipv4;
-      }
-
-      const server = new SKServer(service);
-      this.found.push(server);
-      this.emit('found', server);
-    });
-    browser.start();
+    browser.on('up', ad => this.handleDiscoveredService(ad, _objectSpread(_objectSpread({}, ad.txt), {}, {
+      name: ad.name || '',
+      hostname: ad.host || '',
+      port: parseInt(ad.port, 10),
+      provider: 'bonjour'
+    })));
     setTimeout(() => {
       if (this.found.length === 0) {
         this.emit('timeout');
@@ -146,46 +115,17 @@ class Discovery extends _eventemitter.default {
 
       browser.stop();
     }, timeout);
+    browser.start();
   }
 
   discoverWithMdns(mDNS, timeout) {
     const browser = mDNS.createBrowser(mDNS.tcp('_signalk-http'));
-    browser.on('serviceUp', ad => {
-      const service = _objectSpread(_objectSpread({}, ad.txtRecord), {}, {
-        hostname: ad.host || '',
-        port: parseInt(ad.port, 10),
-        provider: 'mdns'
-      });
-
-      if (service.hasOwnProperty('roles') && typeof service.roles === 'string' && service.roles.includes(',')) {
-        service.roles = service.roles.split(',').map(role => role.trim().toLowerCase());
-      }
-
-      if (service.hasOwnProperty('roles') && typeof service.roles === 'string' && !service.roles.includes(',')) {
-        service.roles = [service.roles].map(role => role.trim().toLowerCase());
-      }
-
-      let ipv4 = service.hostname;
-
-      if (Array.isArray(ad.addresses)) {
-        ipv4 = ad.addresses.reduce((found, address) => {
-          if (address && typeof address === 'string' && address.includes('.')) {
-            found = address;
-          }
-
-          return found;
-        }, service.hostname);
-      }
-
-      if (ipv4.trim() !== '') {
-        service.hostname = ipv4;
-      }
-
-      const server = new SKServer(service);
-      this.found.push(server);
-      this.emit('found', server);
-    });
-    browser.start();
+    browser.on('serviceUp', ad => this.handleDiscoveredService(ad, _objectSpread(_objectSpread({}, ad.txtRecord), {}, {
+      hostname: ad.host || '',
+      port: parseInt(ad.port, 10),
+      provider: 'mdns'
+    })));
+    browser.on('error', err => this.handleDiscoveryError(err));
     setTimeout(() => {
       if (this.found.length === 0) {
         this.emit('timeout');
@@ -193,6 +133,38 @@ class Discovery extends _eventemitter.default {
 
       browser.stop();
     }, timeout);
+    browser.start();
+  }
+
+  handleDiscoveryError(err) {
+    console.error("Error during discovery: ".concat(err.message));
+  }
+
+  handleDiscoveredService(ad, service) {
+    if (typeof service.roles === 'string') {
+      service.roles = service.roles.split(',').map(role => role.trim().toLowerCase());
+    }
+
+    service.roles = Array.isArray(service.roles) ? service.roles : [];
+    let ipv4 = service.hostname;
+
+    if (Array.isArray(ad.addresses)) {
+      ipv4 = ad.addresses.reduce((found, address) => {
+        if (address && typeof address === 'string' && address.includes('.')) {
+          found = address;
+        }
+
+        return found;
+      }, service.hostname);
+    }
+
+    if (ipv4.trim() !== '') {
+      service.hostname = ipv4;
+    }
+
+    const server = new SKServer(service);
+    this.found.push(server);
+    this.emit('found', server);
   }
 
 }
