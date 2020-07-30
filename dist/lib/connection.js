@@ -142,6 +142,25 @@ class Connection extends _eventemitter.default {
     this.reconnect();
   }
 
+  backOffAndReconnect() {
+    if (this.isConnecting === true) {
+      return;
+    }
+
+    const {
+      maxTimeBetweenRetries
+    } = this.options;
+    let waitTime = this._retries < Math.round(maxTimeBetweenRetries / 250) ? this._retries * 250 : maxTimeBetweenRetries;
+
+    if (waitTime === 0) {
+      return this.reconnect();
+    }
+
+    this.emit('backOffBeforeReconnect', waitTime);
+    debug("[backOffAndReconnect] waiting ".concat(waitTime, " ms before reconnecting"));
+    setTimeout(() => this.reconnect(), waitTime);
+  }
+
   reconnect() {
     let initial = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
 
@@ -217,7 +236,7 @@ class Connection extends _eventemitter.default {
       this.emit('error', err);
       this._retries += 1;
       this.isConnecting = false;
-      return this.reconnect();
+      return this.backOffAndReconnect();
     });
   }
 
@@ -293,7 +312,7 @@ class Connection extends _eventemitter.default {
   _onWSError(err) {
     debug('[_onWSError] WS error', err.message || '');
     this.emit('error', err);
-    this.reconnect();
+    this.backOffAndReconnect();
   }
 
   _onWSClose(evt) {
@@ -306,10 +325,15 @@ class Connection extends _eventemitter.default {
     this.isConnecting = false;
     this.socket = null;
     this.emit('disconnect', evt);
-    this.reconnect();
+    this.backOffAndReconnect();
   }
 
   unsubscribe() {
+    if (this.connected !== true || this.socket === null) {
+      debug('Not connected to socket');
+      return;
+    }
+
     this.send(JSON.stringify({
       context: '*',
       unsubscribe: [{

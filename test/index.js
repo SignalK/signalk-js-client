@@ -151,12 +151,7 @@ describe('Signal K SDK', () => {
           .requestDeviceAccess('Top Secret Client', clientId)
           .then((result) => {
             client.disconnect()
-            assert(
-              isObject(result, 'response', true) &&
-                result.response.hasOwnProperty('state') &&
-                result.response.hasOwnProperty('requestId') &&
-                result.response.hasOwnProperty('href')
-            )
+            assert(isObject(result, 'response', true) && result.response.hasOwnProperty('state') && result.response.hasOwnProperty('requestId') && result.response.hasOwnProperty('href'))
             done()
           })
           .catch((err) => done(err))
@@ -226,11 +221,7 @@ describe('Signal K SDK', () => {
       })
 
       client.on('notification', (notification) => {
-        if (
-          sent === false &&
-          notification.path.includes('security.accessRequest') &&
-          notification.path.includes(clientId)
-        ) {
+        if (sent === false && notification.path.includes('security.accessRequest') && notification.path.includes(clientId)) {
           sent = true
           client
             .respondToAccessRequest(clientId, PERMISSIONS_READONLY)
@@ -346,15 +337,7 @@ describe('Signal K SDK', () => {
         })
 
         request.once('response', (response) => {
-          assert(
-            response &&
-              typeof response === 'object' &&
-              response.hasOwnProperty('requestId') &&
-              response.hasOwnProperty('state') &&
-              response.hasOwnProperty('statusCode') &&
-              (response.state === 'PENDING' || response.state === 'COMPLETED') &&
-              response.requestId === request.getRequestId()
-          )
+          assert(response && typeof response === 'object' && response.hasOwnProperty('requestId') && response.hasOwnProperty('state') && response.hasOwnProperty('statusCode') && (response.state === 'PENDING' || response.state === 'COMPLETED') && response.requestId === request.getRequestId())
           done()
         })
 
@@ -365,100 +348,57 @@ describe('Signal K SDK', () => {
     }).timeout(15000)
 
     // TODO: not yet implemented by Signal K node.js server, so this this would always fail
-    it.skip(
-      '... TODO: sends a query for a request and receives a well-formed response (not yet implemented in Node server)',
-      (done) => {
-        const client = new Client({
-          hostname: TEST_SERVER_HOSTNAME,
-          port: TEST_SERVER_PORT,
-          useTLS: false,
-          reconnect: false,
-          notifications: false,
-          bearerTokenPrefix: BEARER_TOKEN_PREFIX,
+    it.skip('... TODO: sends a query for a request and receives a well-formed response (not yet implemented in Node server)', (done) => {
+      const client = new Client({
+        hostname: TEST_SERVER_HOSTNAME,
+        port: TEST_SERVER_PORT,
+        useTLS: false,
+        reconnect: false,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX,
+      })
+
+      let received = 0
+
+      client.on('connect', () => {
+        const request = client.request('LOGIN', {
+          login: {
+            username: USER,
+            password: PASSWORD,
+          },
         })
 
-        let received = 0
+        request.on('response', (response) => {
+          received += 1
 
-        client.on('connect', () => {
-          const request = client.request('LOGIN', {
-            login: {
-              username: USER,
-              password: PASSWORD,
-            },
-          })
+          if (received === 1) {
+            // Send query after initial response...
+            request.query()
+          }
 
-          request.on('response', (response) => {
-            received += 1
-
-            if (received === 1) {
-              // Send query after initial response...
-              request.query()
-            }
-
-            if (received > 1) {
-              assert(
-                response &&
-                  typeof response === 'object' &&
-                  response.hasOwnProperty('requestId') &&
-                  response.hasOwnProperty('state') &&
-                  response.hasOwnProperty('statusCode') &&
-                  (response.state === 'PENDING' || response.state === 'COMPLETED') &&
-                  response.requestId === request.getRequestId()
-              )
-              done()
-            }
-          })
-
-          request.send()
+          if (received > 1) {
+            assert(response && typeof response === 'object' && response.hasOwnProperty('requestId') && response.hasOwnProperty('state') && response.hasOwnProperty('statusCode') && (response.state === 'PENDING' || response.state === 'COMPLETED') && response.requestId === request.getRequestId())
+            done()
+          }
         })
 
-        client.connect()
-      }
-    ).timeout(15000)
+        request.send()
+      })
+
+      client.connect()
+    }).timeout(15000)
   })
 
   describe('mDNS server discovery', () => {
     !process.env.TRAVIS &&
-      it('... Emits an event when a Signal K host is found, using mDNS', (done) => {
-        let found = 0
-        const discovery = new Discovery(mdns, 10000)
-
-        discovery.once('found', (server) => {
-          found += 1
-          assert(
-            typeof server.hostname === 'string' &&
-              server.hostname !== '' &&
-              typeof server.port === 'number' &&
-              typeof server.createClient === 'function' &&
-              Array.isArray(server.roles) &&
-              server.createClient() instanceof Client
-          )
-          done()
-        })
-
-        discovery.on('timeout', () => {
-          if (found === 0) {
-            done()
-          }
-        })
-      }).timeout(15000)
-
-    !process.env.TRAVIS &&
-      it('... Emits an event when a Signal K host is found, using Bonjour', (done) => {
+      it('... Emits an event when a Signal K host is found', (done) => {
         let found = 0
         const bonjour = Bonjour()
         const discovery = new Discovery(bonjour, 10000)
 
         discovery.once('found', (server) => {
           found += 1
-          assert(
-            typeof server.hostname === 'string' &&
-              server.hostname !== '' &&
-              typeof server.port === 'number' &&
-              typeof server.createClient === 'function' &&
-              Array.isArray(server.roles) &&
-              server.createClient() instanceof Client
-          )
+          assert(typeof server.hostname === 'string' && server.hostname !== '' && typeof server.port === 'number' && typeof server.createClient === 'function' && Array.isArray(server.roles) && server.createClient() instanceof Client)
           done()
         })
 
@@ -487,13 +427,7 @@ describe('Signal K SDK', () => {
       client.on('delta', (data) => {
         count += 1
         if (count < 5) {
-          assert(
-            data &&
-              typeof data === 'object' &&
-              data.hasOwnProperty('updates') &&
-              data.hasOwnProperty('context') &&
-              data.context === client.self
-          )
+          assert(data && typeof data === 'object' && data.hasOwnProperty('updates') && data.hasOwnProperty('context') && data.context === client.self)
         } else if (count === 5) {
           done()
         }
@@ -518,13 +452,7 @@ describe('Signal K SDK', () => {
       client.on('delta', (data) => {
         count += 1
         if (count < 5) {
-          assert(
-            data &&
-              typeof data === 'object' &&
-              data.hasOwnProperty('updates') &&
-              data.hasOwnProperty('context') &&
-              data.context === client.self
-          )
+          assert(data && typeof data === 'object' && data.hasOwnProperty('updates') && data.hasOwnProperty('context') && data.context === client.self)
         } else if (count === 5) {
           done()
         }
@@ -605,14 +533,7 @@ describe('Signal K SDK', () => {
             hasPath = false
           }
 
-          assert(
-            data &&
-              typeof data === 'object' &&
-              data.hasOwnProperty('updates') &&
-              data.hasOwnProperty('context') &&
-              hasPath &&
-              data.context === client.self
-          )
+          assert(data && typeof data === 'object' && data.hasOwnProperty('updates') && data.hasOwnProperty('context') && hasPath && data.context === client.self)
         } else if (count === 5) {
           done()
         }
@@ -651,10 +572,7 @@ describe('Signal K SDK', () => {
         }
 
         if (pathsFound.includes('notifications.*') && pathsFound.includes('navigation.position')) {
-          assert(
-            pathsFound.includes('notifications.*') === true &&
-              pathsFound.includes('navigation.position') === true
-          )
+          assert(pathsFound.includes('notifications.*') === true && pathsFound.includes('navigation.position') === true)
 
           isDone = true
           return done()
@@ -671,11 +589,7 @@ describe('Signal K SDK', () => {
                 pathsFound.push(mut.path)
               }
 
-              if (
-                mut.path.includes('notifications.') &&
-                data.context === client.self &&
-                !pathsFound.includes('notifications.*')
-              ) {
+              if (mut.path.includes('notifications.') && data.context === client.self && !pathsFound.includes('notifications.*')) {
                 pathsFound.push('notifications.*')
               }
             })
@@ -724,14 +638,7 @@ describe('Signal K SDK', () => {
             hasPath = false
           }
 
-          assert(
-            data &&
-              typeof data === 'object' &&
-              data.hasOwnProperty('updates') &&
-              data.hasOwnProperty('context') &&
-              hasPath &&
-              data.context === client.self
-          )
+          assert(data && typeof data === 'object' && data.hasOwnProperty('updates') && data.hasOwnProperty('context') && hasPath && data.context === client.self)
         } else if (count === 5) {
           done()
         }
@@ -770,8 +677,7 @@ describe('Signal K SDK', () => {
           return
         }
 
-        isDone =
-          paths.includes('navigation.position') && paths.includes('environment.wind.angleApparent')
+        isDone = paths.includes('navigation.position') && paths.includes('environment.wind.angleApparent')
 
         if (isDone === true) {
           assert(isDone === true)
@@ -854,48 +760,42 @@ describe('Signal K SDK', () => {
       client.connect().catch((err) => done(err))
     }).timeout(30000)
 
-    it.skip(
-      '... @TODO: Unsubscribes, after subscribing using a behaviour modifier (not supported by server)',
-      (done) => {
-        const client = new Client({
-          hostname: 'demo.signalk.org',
-          port: 80,
-          useTLS: false,
-          reconnect: false,
-          notifications: false,
-          bearerTokenPrefix: BEARER_TOKEN_PREFIX,
-          deltaStreamBehaviour: null,
-        })
+    it.skip('... @TODO: Unsubscribes, after subscribing using a behaviour modifier (not supported by server)', (done) => {
+      const client = new Client({
+        hostname: 'demo.signalk.org',
+        port: 80,
+        useTLS: false,
+        reconnect: false,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX,
+        deltaStreamBehaviour: null,
+      })
 
-        const paths = []
-        let isDone = false
-        let countAtUnsubscribe = -1
+      const paths = []
+      let isDone = false
+      let countAtUnsubscribe = -1
 
-        client.on('delta', (delta) => {
-          if (isDone === true) {
-            return
-          }
+      client.on('delta', (delta) => {
+        if (isDone === true) {
+          return
+        }
 
-          getPathsFromDelta(delta, paths)
+        getPathsFromDelta(delta, paths)
 
-          if (countAtUnsubscribe === -1 && paths.length > 0) {
-            client.unsubscribe()
-            countAtUnsubscribe = paths.length
+        if (countAtUnsubscribe === -1 && paths.length > 0) {
+          client.unsubscribe()
+          countAtUnsubscribe = paths.length
 
-            setTimeout(() => {
-              isDone = true
-              assert(
-                countAtUnsubscribe === paths.length,
-                `No. of recorded paths (${paths.length}) doesn't match count when unsubscribe() was called (${countAtUnsubscribe})`
-              )
-              done()
-            }, 1500)
-          }
-        })
+          setTimeout(() => {
+            isDone = true
+            assert(countAtUnsubscribe === paths.length, `No. of recorded paths (${paths.length}) doesn't match count when unsubscribe() was called (${countAtUnsubscribe})`)
+            done()
+          }, 1500)
+        }
+      })
 
-        client.connect().catch((err) => done(err))
-      }
-    ).timeout(30000)
+      client.connect().catch((err) => done(err))
+    }).timeout(30000)
 
     it('... Streams no data when the behaviour is set to "none"', (done) => {
       const client = new Client({
@@ -953,12 +853,7 @@ describe('Signal K SDK', () => {
       })
 
       client.once('notification', (notification) => {
-        assert(
-          notification &&
-            typeof notification === 'object' &&
-            notification.hasOwnProperty('path') &&
-            notification.path.includes('security.')
-        )
+        assert(notification && typeof notification === 'object' && notification.hasOwnProperty('path') && notification.path.includes('security.'))
         done()
       })
 
@@ -996,20 +891,7 @@ describe('Signal K SDK', () => {
       })
     })
 
-    const groups = [
-      'communication',
-      'design',
-      'electrical',
-      'environment',
-      'navigation',
-      'notifications',
-      'performance',
-      'propulsion',
-      'sails',
-      'sensors',
-      'steering',
-      'tanks',
-    ]
+    const groups = ['communication', 'design', 'electrical', 'environment', 'navigation', 'notifications', 'performance', 'propulsion', 'sails', 'sensors', 'steering', 'tanks']
 
     groups.forEach((group) => {
       it(`... Fetches "self/${group}" successfully`, (done) => {
@@ -1374,6 +1256,52 @@ describe('Signal K SDK', () => {
       client.connect().catch(() => {})
     }).timeout(60000)
 
+    it("... Calling disconnect on a disconnected client shouldn't throw", (done) => {
+      const client = new Client({
+        hostname: 'demo.signalk.org',
+        port: 80,
+        useTLS: false,
+        reconnect: false,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX,
+      })
+
+      client.on('disconnect', () => {
+        client.disconnect(true).then(() => {
+          assert(true)
+          return done()
+        })
+      })
+
+      client.on('connect', () => {
+        client.disconnect()
+      })
+
+      client.connect()
+    }).timeout(30000)
+
+    it('... Reconnects after a connection failure, with progressive back-off behaviour', (done) => {
+      const client = new Client({
+        hostname: 'poo.signalk.org',
+        port: 80,
+        useTLS: false,
+        maxRetries: 10,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX,
+      })
+
+      const waitTimes = []
+      client.on('backOffBeforeReconnect', (waitTime) => waitTimes.push(waitTime))
+
+      client.on('hitMaxRetries', () => {
+        assert.deepEqual(waitTimes, [250, 500, 750, 1000, 1250, 1500, 1750, 2000, 2250])
+        assert(client.retries === 10)
+        done()
+      })
+
+      client.connect().catch(() => {})
+    }).timeout(60000)
+
     it('... Emits an "error" event after a failed connection attempt', (done) => {
       const client = new Client({
         hostname: 'poo.signalk.org',
@@ -1497,12 +1425,7 @@ describe('Signal K SDK', () => {
             done(new Error("Got data when we shouldn't be authenticated"))
           })
           .catch((err) => {
-            assert(
-              err &&
-                typeof err === 'object' &&
-                typeof err.message === 'string' &&
-                err.message.includes('401')
-            )
+            assert(err && typeof err === 'object' && typeof err.message === 'string' && err.message.includes('401'))
             done()
           })
       })

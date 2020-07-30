@@ -15,8 +15,7 @@ import https from 'https'
 
 const debug = Debug('signalk-js-sdk/Connection')
 
-const isNode =
-  typeof process !== 'undefined' && process.versions != null && process.versions.node != null
+const isNode = typeof process !== 'undefined' && process.versions != null && process.versions.node != null
 
 export const SUPPORTED_STREAM_BEHAVIOUR = {
   self: 'self',
@@ -99,11 +98,7 @@ export default class Connection extends EventEmitter {
     if (protocol === 'ws') {
       uri += '/stream'
 
-      if (
-        deltaStreamBehaviour &&
-        SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) &&
-        SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== ''
-      ) {
+      if (deltaStreamBehaviour && SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
         uri += `?subscribe=${SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]}`
       }
     }
@@ -127,6 +122,25 @@ export default class Connection extends EventEmitter {
     debug('[disconnect] called')
     this.shouldDisconnect = true
     this.reconnect()
+  }
+
+  backOffAndReconnect() {
+    if (this.isConnecting === true) {
+      return
+    }
+
+    const { maxTimeBetweenRetries } = this.options
+
+    let waitTime = this._retries < Math.round(maxTimeBetweenRetries / 250) ? this._retries * 250 : maxTimeBetweenRetries
+
+    if (waitTime === 0) {
+      return this.reconnect()
+    }
+
+    this.emit('backOffBeforeReconnect', waitTime)
+
+    debug(`[backOffAndReconnect] waiting ${waitTime} ms before reconnecting`)
+    setTimeout(() => this.reconnect(), waitTime)
   }
 
   reconnect(initial = false) {
@@ -195,10 +209,7 @@ export default class Connection extends EventEmitter {
 
         this._authenticated = true
         this._token = {
-          kind:
-            typeof result.type === 'string' && result.type.trim() !== ''
-              ? result.type
-              : this._bearerTokenPrefix,
+          kind: typeof result.type === 'string' && result.type.trim() !== '' ? result.type : this._bearerTokenPrefix,
           token: result.token,
         }
 
@@ -211,7 +222,7 @@ export default class Connection extends EventEmitter {
         this.emit('error', err)
         this._retries += 1
         this.isConnecting = false
-        return this.reconnect()
+        return this.backOffAndReconnect()
       })
   }
 
@@ -260,13 +271,7 @@ export default class Connection extends EventEmitter {
       console.error(`[Connection: ${this.options.hostname}] Error parsing data: ${e.message}`)
     }
 
-    if (
-      data &&
-      typeof data === 'object' &&
-      data.hasOwnProperty('name') &&
-      data.hasOwnProperty('version') &&
-      data.hasOwnProperty('roles')
-    ) {
+    if (data && typeof data === 'object' && data.hasOwnProperty('name') && data.hasOwnProperty('version') && data.hasOwnProperty('roles')) {
       this.connectionInfo = data
     }
 
@@ -289,7 +294,7 @@ export default class Connection extends EventEmitter {
   _onWSError(err) {
     debug('[_onWSError] WS error', err.message || '')
     this.emit('error', err)
-    this.reconnect()
+    this.backOffAndReconnect()
   }
 
   _onWSClose(evt) {
@@ -304,10 +309,15 @@ export default class Connection extends EventEmitter {
     this.socket = null
 
     this.emit('disconnect', evt)
-    this.reconnect()
+    this.backOffAndReconnect()
   }
 
   unsubscribe() {
+    if (this.connected !== true || this.socket === null) {
+      debug('Not connected to socket')
+      return
+    }
+
     this.send(
       JSON.stringify({
         context: '*',
@@ -321,12 +331,7 @@ export default class Connection extends EventEmitter {
   }
 
   subscribe(subscriptions = []) {
-    if (
-      !Array.isArray(subscriptions) &&
-      subscriptions &&
-      typeof subscriptions === 'object' &&
-      subscriptions.hasOwnProperty('subscribe')
-    ) {
+    if (!Array.isArray(subscriptions) && subscriptions && typeof subscriptions === 'object' && subscriptions.hasOwnProperty('subscribe')) {
       subscriptions = [subscriptions]
     }
 
@@ -447,9 +452,7 @@ const flattenSubscriptions = (subscriptionCommands) => {
       commandPerContext[command.context] = []
     }
 
-    commandPerContext[command.context] = commandPerContext[command.context].concat(
-      command.subscribe
-    )
+    commandPerContext[command.context] = commandPerContext[command.context].concat(command.subscribe)
   })
 
   return Object.keys(commandPerContext).map((context) => {
