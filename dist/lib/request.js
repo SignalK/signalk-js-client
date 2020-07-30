@@ -66,7 +66,7 @@ class Request extends _eventemitter.default {
       response,
       receivedAt
     });
-    this.emit('response', _objectSpread({}, response, {
+    this.emit('response', _objectSpread(_objectSpread({}, response), {}, {
       request: {
         receivedAt,
         name: this.name,

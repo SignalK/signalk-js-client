@@ -371,7 +371,7 @@ class Client extends _eventemitter.default {
     }
 
     this.api.notifications().then(result => {
-      this.notifications = _objectSpread({}, this.notifications, {}, flattenTree(result));
+      this.notifications = _objectSpread(_objectSpread({}, this.notifications), flattenTree(result));
       Object.keys(this.notifications).forEach(path => {
         const notification = _objectSpread({
           path

@@ -11,7 +11,7 @@ import EventEmitter from 'eventemitter3'
 import Client from './client'
 
 export class SKServer {
-  constructor (service) {
+  constructor(service) {
     this._roles = service.roles || ['master', 'main']
     this._self = service.self || ''
     this._version = service.version || '0.0.0'
@@ -19,100 +19,144 @@ export class SKServer {
     this._port = service.port
   }
 
-  get roles () {
+  get roles() {
     return this._roles
   }
 
-  get self () {
+  get self() {
     return this._self
   }
 
-  get version () {
+  get version() {
     return this._version
   }
 
-  get hostname () {
+  get hostname() {
     return this._hostname
   }
 
-  get port () {
+  get port() {
     return this._port
   }
 
-  isMain () {
+  isMain() {
     return this._roles.includes('main')
   }
 
-  isMaster () {
+  isMaster() {
     return this._roles.includes('master')
   }
 
-  createClient (opts = {}) {
+  createClient(opts = {}) {
     return new Client({
       ...opts,
       hostname: this._hostname,
-      port: this._port
+      port: this._port,
     })
   }
 }
 
 export default class Discovery extends EventEmitter {
-  constructor (bonjour, timeout = 60000) {
+  constructor(bonjourOrMdns, timeout = 60000) {
     super()
 
-    const props = [ '_server', '_registry' ].join(',')
+    this.found = []
 
-    if (!bonjour || typeof bonjour !== 'object' || Object.keys(bonjour).join(',') !== props) {
-      throw new Error('Invalid mDNS provider')
+    if (!bonjourOrMdns || typeof bonjourOrMdns !== 'object') {
+      throw new Error('No mDNS provider given')
     }
 
-    this.found = []
+    const bonjourProps = ['_server', '_registry'].join(',')
+    const mdnsProps = ['dns_sd', 'Advertisement', 'createAdvertisement', 'Browser'].join(',')
+
+    if (Object.keys(bonjourOrMdns).join(',').startsWith(bonjourProps)) {
+      return this.discoverWithBonjour(bonjourOrMdns, timeout)
+    }
+
+    if (Object.keys(bonjourOrMdns).join(',').startsWith(mdnsProps)) {
+      return this.discoverWithMdns(bonjourOrMdns, timeout)
+    }
+
+    throw new Error('Unrecognized mDNS provider given')
+  }
+
+  discoverWithBonjour(bonjour, timeout) {
     const browser = bonjour.find({ type: 'signalk-http' })
 
-    browser.on('up', ad => {
-      const service = {
+    browser.on('up', (ad) =>
+      this.handleDiscoveredService(ad, {
         ...ad.txt,
         name: ad.name || '',
         hostname: ad.host || '',
-        port: parseInt(ad.port, 10)
-      }
-
-      if (service.hasOwnProperty('roles') && typeof service.roles === 'string' && service.roles.includes(',')) {
-        service.roles = service.roles.split(',').map(role => role.trim().toLowerCase())
-      }
-
-      if (service.hasOwnProperty('roles') && typeof service.roles === 'string' && !service.roles.includes(',')) {
-        service.roles = [ service.roles ].map(role => role.trim().toLowerCase())
-      }
-
-      let ipv4 = service.hostname
-
-      if (Array.isArray(ad.addresses)) {
-        ipv4 = ad.addresses.reduce((found, address) => {
-          if (address && typeof address === 'string' && address.includes('.')) {
-            found = address
-          }
-          return found
-        }, service.hostname)
-      }
-
-      if (ipv4.trim() !== '') {
-        service.hostname = ipv4
-      }
-
-      const server = new SKServer(service)
-      this.found.push(server)
-      this.emit('found', server)
-    })
-
-    browser.start()
+        port: parseInt(ad.port, 10),
+        provider: 'bonjour',
+      })
+    )
 
     setTimeout(() => {
       if (this.found.length === 0) {
         this.emit('timeout')
       }
-      
+
       browser.stop()
     }, timeout)
+
+    browser.start()
+  }
+
+  discoverWithMdns(mDNS, timeout) {
+    const browser = mDNS.createBrowser(mDNS.tcp('_signalk-http'))
+
+    browser.on('serviceUp', (ad) =>
+      this.handleDiscoveredService(ad, {
+        ...ad.txtRecord,
+        hostname: ad.host || '',
+        port: parseInt(ad.port, 10),
+        provider: 'mdns',
+      })
+    )
+
+    browser.on('error', (err) => this.handleDiscoveryError(err))
+
+    setTimeout(() => {
+      if (this.found.length === 0) {
+        this.emit('timeout')
+      }
+
+      browser.stop()
+    }, timeout)
+
+    browser.start()
+  }
+
+  handleDiscoveryError(err) {
+    console.error(`Error during discovery: ${err.message}`)
+  }
+
+  handleDiscoveredService(ad, service) {
+    if (typeof service.roles === 'string') {
+      service.roles = service.roles.split(',').map((role) => role.trim().toLowerCase())
+    }
+
+    service.roles = Array.isArray(service.roles) ? service.roles : []
+
+    let ipv4 = service.hostname
+
+    if (Array.isArray(ad.addresses)) {
+      ipv4 = ad.addresses.reduce((found, address) => {
+        if (address && typeof address === 'string' && address.includes('.')) {
+          found = address
+        }
+        return found
+      }, service.hostname)
+    }
+
+    if (ipv4.trim() !== '') {
+      service.hostname = ipv4
+    }
+
+    const server = new SKServer(service)
+    this.found.push(server)
+    this.emit('found', server)
   }
 }
