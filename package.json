@@ -31,8 +31,8 @@
     "casper-chai": "^0.3.0",
     "chai": "^4.1.0",
     "freeport-promise": "^1.1.0",
+    "mocha": "^7.2.0",
     "mdns": "^2.5.1",
-    "mocha": "^6.0.2",
     "signalk-server": "^1.28.0"
   },
   "repository": {
