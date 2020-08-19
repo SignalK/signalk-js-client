@@ -10,7 +10,9 @@
     "prepublishOnly": "npm run dist",
     "preversion": "npm test",
     "postversion": "npm run push && git add --all . && git push && git push --tags",
-    "push": "npm publish --access public --scope @signalk ."
+    "push": "npm publish --access public --scope @signalk .",
+    "create-release": "github-create-release --owner signalk --repository signalk-js-client",
+    "release": "git tag -d v$npm_package_version && git tag v$npm_package_version && git push --tags && git push && npm run create-release"
   },
   "keywords": [
     "signal k",
@@ -27,6 +29,7 @@
     "@babel/core": "^7.10.2",
     "@babel/preset-env": "^7.10.2",
     "@babel/register": "^7.10.1",
+    "@signalk/github-create-release": "^1.2.0",
     "bonjour": "^3.5.0",
     "casper-chai": "^0.3.0",
     "chai": "^4.1.0",
