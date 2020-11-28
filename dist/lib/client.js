@@ -340,7 +340,7 @@ class Client extends _eventemitter.default {
 
     const notifications = {};
     delta.updates.forEach(update => {
-      update.values.forEach(mut => {
+      (update.values || []).forEach(mut => {
         if (typeof mut.path === 'string' && mut.path.includes('notifications.')) {
           notifications[mut.path.replace('notifications.', '')] = _objectSpread({}, mut.value);
         }

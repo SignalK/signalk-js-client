@@ -352,7 +352,7 @@ export default class Client extends EventEmitter {
     const notifications = {}
 
     delta.updates.forEach((update) => {
-      update.values.forEach((mut) => {
+      (update.values || []).forEach((mut) => {
         if (typeof mut.path === 'string' && mut.path.includes('notifications.')) {
           notifications[mut.path.replace('notifications.', '')] = {
             ...mut.value,
