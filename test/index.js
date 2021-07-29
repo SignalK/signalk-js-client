@@ -463,8 +463,8 @@ describe('Signal K SDK', () => {
 
     it('... Streams data from multiple vessels when the behaviour is set to "all"', (done) => {
       const client = new Client({
-        hostname: 'demo.wilhelmsk.com',
-        port: 3000,
+        hostname: 'demo.signalk.org',
+        port: 80,
         useTLS: false,
         reconnect: false,
         notifications: false,
@@ -1399,7 +1399,8 @@ describe('Signal K SDK', () => {
       })
 
       client.on('self', (self) => {
-        assert(self === 'vessels.urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d')
+        assert(self.startsWith('vessels.urn:mrn:signalk:uuid:'))
+        assert(self.length === 65)
         done()
       })
 
