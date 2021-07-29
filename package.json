@@ -59,7 +59,7 @@
   "dependencies": {
     "core-js": "^3.6.5",
     "cross-fetch": "^3.0.3",
-    "debug": "^4.1.1",
+    "debug": "^4.3.2",
     "eventemitter3": "^4.0.0",
     "isomorphic-ws": "^4.0.0",
     "uuid": "^8.1.0"
