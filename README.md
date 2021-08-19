@@ -94,6 +94,10 @@ client = new Client({
   // - "all" provides a stream of all data for all vessels
   // - "none" provides no data over the stream
   deltaStreamBehaviour: 'self',
+  // Either "all" or null.
+  // - null: provides no Meta data over the stream
+  // - "all" include Meta data of all data for all vessels
+  sendMeta: 'all',
 })
 
 // 2. Subscribe to specific Signal K paths

@@ -873,6 +873,45 @@ describe('Signal K SDK', () => {
     }).timeout(60000)
   })
 
+  describe('Metadata', () => {
+    it('... Connects and receives metadata', (done) => {
+      const clientId = uuid()
+      const client = new Client({
+        hostname: 'demo.signalk.org',
+        port: 80,
+        useTLS: false,
+        reconnect: false,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX,
+        deltaStreamBehaviour: 'self',
+        sendMeta: 'all',
+      })
+
+      let count = 0
+      let isDone = false;
+      let timeout = setTimeout(() => {
+        assert(count > 1, 'No Metadata received')
+      }, 3000)
+
+      client.on('delta', (data) => {
+        assert(data && typeof data === 'object' && data.hasOwnProperty('updates'))
+        if (data && typeof data === 'object' && Array.isArray(data.updates)) {
+          data.updates.forEach((update) => {
+            if(update.hasOwnProperty('meta') && Array.isArray(update.meta)) {
+              count += 1;
+            }
+          })
+          if(count > 0 && !isDone) {
+            isDone = true
+            done()
+          }
+        }
+      })
+
+      client.connect().catch((err) => done(err))
+    }).timeout(60000)
+  })
+
   describe('REST API', () => {
     let client
 
