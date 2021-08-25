@@ -23,6 +23,10 @@ export const SUPPORTED_STREAM_BEHAVIOUR = {
   none: 'none',
 }
 
+export const SUPPORTED_SEND_META = {
+  all: 'all',
+}
+
 export default class Connection extends EventEmitter {
   constructor(options, subscriptions = []) {
     super()
@@ -86,7 +90,7 @@ export default class Connection extends EventEmitter {
   }
 
   buildURI(protocol) {
-    const { useTLS, hostname, port, version, deltaStreamBehaviour } = this.options
+    const { useTLS, hostname, port, version, deltaStreamBehaviour, sendMeta } = this.options
 
     let uri = useTLS === true ? `${protocol}s://` : `${protocol}://`
     uri += hostname
@@ -98,8 +102,15 @@ export default class Connection extends EventEmitter {
     if (protocol === 'ws') {
       uri += '/stream'
 
+      const params = []
       if (deltaStreamBehaviour && SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
-        uri += `?subscribe=${SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]}`
+        params.push(`subscribe=${SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]}`)
+      }
+      if (sendMeta && SUPPORTED_SEND_META.hasOwnProperty(sendMeta) && SUPPORTED_SEND_META[sendMeta] !== '') {
+        params.push(`sendMeta=${SUPPORTED_SEND_META[sendMeta]}`)
+      }
+      if (params) {
+        uri += '?' + params.join('&')
       }
     }
 
