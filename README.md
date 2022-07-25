@@ -32,6 +32,8 @@ const defaults = {
   username: null,
   password: null,
   deltaStreamBehaviour: 'none',
+  pingEnable: false,
+  pingInterval: 30,
 }
 
 // Instantiate client

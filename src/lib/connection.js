@@ -47,6 +47,7 @@ export default class Connection extends EventEmitter {
     this._self = ''
     this._subscriptions = subscriptions
 
+    this.sendPing = this.sendPing.bind(this)
     this.onWSMessage = this._onWSMessage.bind(this)
     this.onWSOpen = this._onWSOpen.bind(this)
     this.onWSClose = this._onWSClose.bind(this)
@@ -270,6 +271,13 @@ export default class Connection extends EventEmitter {
     this.removeAllListeners()
   }
 
+  sendPing() {
+    if (this.connected === true) {
+      this.socket.ping("");
+      setTimeout(this.sendPing, this.options.pingInterval * 1000);
+    }
+  }
+
   _onWSMessage(evt) {
     this.lastMessage = Date.now()
     let data = evt.data
@@ -299,6 +307,7 @@ export default class Connection extends EventEmitter {
     }
 
     this._retries = 0
+    if(this.options.pingEnable) this.sendPing();
     this.emit('connect')
   }
 
