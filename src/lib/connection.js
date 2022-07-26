@@ -38,6 +38,7 @@ export default class Connection extends EventEmitter {
     this.socket = null
     this.lastMessage = -1
     this.isConnecting = false
+    this.wsKeepaliveIntervalMs = this.options.wsKeepaliveInterval * 1000
 
     this._fetchReady = false
     this._bearerTokenPrefix = this.options.bearerTokenPrefix || 'Bearer'
@@ -47,7 +48,7 @@ export default class Connection extends EventEmitter {
     this._self = ''
     this._subscriptions = subscriptions
 
-    this.sendPing = this.sendPing.bind(this)
+    this.keepalivedAndReschedule = this.keepalivedAndReschedule.bind(this)
     this.onWSMessage = this._onWSMessage.bind(this)
     this.onWSOpen = this._onWSOpen.bind(this)
     this.onWSClose = this._onWSClose.bind(this)
@@ -271,10 +272,12 @@ export default class Connection extends EventEmitter {
     this.removeAllListeners()
   }
 
-  sendPing() {
+  keepalivedAndReschedule() {
     if (this.connected === true) {
-      this.socket.ping("");
-      setTimeout(this.sendPing, this.options.pingInterval * 1000);
+      if (this.lastMessage < Date.now() - this.wsKeepaliveIntervalMs) {
+        this.socket.send("{}");
+      }
+      setTimeout(this.keepalivedAndReschedule, this.wsKeepaliveIntervalMs);
     }
   }
 
@@ -307,7 +310,7 @@ export default class Connection extends EventEmitter {
     }
 
     this._retries = 0
-    if(this.options.pingEnable) this.sendPing();
+    if(this.options.wsKeepaliveInterval > 0) this.keepalivedAndReschedule();
     this.emit('connect')
   }
 

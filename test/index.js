@@ -836,7 +836,7 @@ describe('Signal K SDK', () => {
       client.connect().catch((err) => done(err))
     }).timeout(20000)
 
-    it('... Send ping in WS every 1s and wait for 10 delta update "navigation.datetime"', (done) => {
+    it('... Send keepalived in WS every 0.5s and wait for 10 delta update "navigation.datetime"', (done) => {
       const client = new Client({
         hostname: 'demo.signalk.org',
         port: 80,
@@ -845,8 +845,7 @@ describe('Signal K SDK', () => {
         notifications: false,
         bearerTokenPrefix: BEARER_TOKEN_PREFIX,
         deltaStreamBehaviour: 'none',
-        pingEnable: true,
-        pingInterval: 1
+        wsKeepaliveInterval: 0.5
       })
 
       let count = 0
