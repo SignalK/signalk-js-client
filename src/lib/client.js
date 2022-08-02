@@ -42,6 +42,7 @@ export default class Client extends EventEmitter {
       password: null,
       deltaStreamBehaviour: 'none',
       subscriptions: [],
+      wsKeepaliveInterval: 0,
       ...options,
     }
 

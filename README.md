@@ -32,6 +32,7 @@ const defaults = {
   username: null,
   password: null,
   deltaStreamBehaviour: 'none',
+  wsKeepaliveInterval: 0
 }
 
 // Instantiate client
@@ -98,6 +99,9 @@ client = new Client({
   // - null: provides no Meta data over the stream
   // - "all" include Meta data of all data for all vessels
   sendMeta: 'all',
+  // Sends an empty message to the websocket every 10 seconds when the client does not receive any more update from the server to detect if the socket is dead.
+  wsKeepaliveInterval: 10
+
 })
 
 // 2. Subscribe to specific Signal K paths

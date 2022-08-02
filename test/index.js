@@ -835,7 +835,65 @@ describe('Signal K SDK', () => {
 
       client.connect().catch((err) => done(err))
     }).timeout(20000)
+
+    it('... Send keepalived in WS every 0.5s and wait for 10 delta update "navigation.datetime"', (done) => {
+      const client = new Client({
+        hostname: 'demo.signalk.org',
+        port: 80,
+        useTLS: false,
+        reconnect: false,
+        notifications: false,
+        bearerTokenPrefix: BEARER_TOKEN_PREFIX,
+        deltaStreamBehaviour: 'none',
+        wsKeepaliveInterval: 0.5
+      })
+
+      let count = 0
+
+      client.on('connect', () => {
+        client.subscribe({
+          context: 'vessels.self',
+          subscribe: [
+            {
+              path: 'navigation.datetime',
+              policy: 'instant',
+            },
+          ],
+        })
+      })
+
+      client.on('delta', (data) => {
+        count += 1
+
+        if (count < 10) {
+          const findPathInUpdate = (update) => {
+            if (!Array.isArray(update.values)) {
+              return false
+            }
+
+            const found = update.values.find((mut) => mut.path === 'navigation.datetime')
+            return found && typeof found === 'object'
+          }
+
+          let hasPath = false
+
+          try {
+            const search = data.updates.find(findPathInUpdate)
+            hasPath = search && typeof search === 'object'
+          } catch (e) {
+            hasPath = false
+          }
+
+          assert(data && typeof data === 'object' && data.hasOwnProperty('updates') && data.hasOwnProperty('context') && hasPath && data.context === client.self)
+        } else if (count === 10) {
+          done()
+        }
+      })
+
+      client.connect().catch((err) => done(err))
+    }).timeout(20000)
   })
+
 
   describe('Notifications', () => {
     it('... Connects and receives notifications', (done) => {
