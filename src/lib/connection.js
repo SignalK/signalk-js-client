@@ -48,7 +48,7 @@ export default class Connection extends EventEmitter {
     this._self = ''
     this._subscriptions = subscriptions
 
-    this.keepalivedAndReschedule = this.keepalivedAndReschedule.bind(this)
+    this.sendKeepaliveWithReschedule = this.sendKeepaliveWithReschedule.bind(this)
     this.onWSMessage = this._onWSMessage.bind(this)
     this.onWSOpen = this._onWSOpen.bind(this)
     this.onWSClose = this._onWSClose.bind(this)
@@ -272,12 +272,12 @@ export default class Connection extends EventEmitter {
     this.removeAllListeners()
   }
 
-  keepalivedAndReschedule() {
+  sendKeepaliveWithReschedule() {
     if (this.connected === true) {
       if (this.lastMessage < Date.now() - this.wsKeepaliveIntervalMs) {
         this.socket.send("{}");
       }
-      setTimeout(this.keepalivedAndReschedule, this.wsKeepaliveIntervalMs);
+      setTimeout(this.sendKeepaliveWithReschedule, this.wsKeepaliveIntervalMs);
     }
   }
 
@@ -310,7 +310,7 @@ export default class Connection extends EventEmitter {
     }
 
     this._retries = 0
-    if(this.options.wsKeepaliveInterval > 0) this.keepalivedAndReschedule();
+    if(this.options.wsKeepaliveInterval > 0) this.sendKeepaliveWithReschedule();
     this.emit('connect')
   }
 
