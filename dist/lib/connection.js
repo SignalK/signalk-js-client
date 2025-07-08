@@ -1,48 +1,36 @@
 "use strict";
 
-require("core-js/modules/es.promise");
-
-require("core-js/modules/es.string.includes");
-
-require("core-js/modules/es.string.replace");
-
-require("core-js/modules/es.string.trim");
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = exports.SUPPORTED_STREAM_BEHAVIOUR = void 0;
-
+exports.default = exports.SUPPORTED_STREAM_BEHAVIOUR = exports.SUPPORTED_SEND_META = void 0;
 var _eventemitter = _interopRequireDefault(require("eventemitter3"));
-
 var _isomorphicWs = _interopRequireDefault(require("isomorphic-ws"));
-
 var _crossFetch = _interopRequireDefault(require("cross-fetch"));
-
 var _debug = _interopRequireDefault(require("debug"));
-
 var _https = _interopRequireDefault(require("https"));
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
-
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
-
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+/**
+ * @description   A Connection represents a single connection to a Signal K server.
+ *                It manages both the HTTP connection (REST API) and the WS connection.
+ * @author        Fabian Tollenaar <fabian@decipher.industries>
+ * @copyright     2018-2019, Fabian Tollenaar. All rights reserved.
+ * @license       Apache-2.0
+ * @module        @signalk/signalk-js-sdk
+ */
 
 const debug = (0, _debug.default)('signalk-js-sdk/Connection');
 const isNode = typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
-const SUPPORTED_STREAM_BEHAVIOUR = {
+const SUPPORTED_STREAM_BEHAVIOUR = exports.SUPPORTED_STREAM_BEHAVIOUR = {
   self: 'self',
   all: 'all',
   none: 'none'
 };
-exports.SUPPORTED_STREAM_BEHAVIOUR = SUPPORTED_STREAM_BEHAVIOUR;
-
+const SUPPORTED_SEND_META = exports.SUPPORTED_SEND_META = {
+  all: 'all'
+};
 class Connection extends _eventemitter.default {
-  constructor(options) {
-    let subscriptions = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+  constructor(options, subscriptions = []) {
     super();
     this.options = options;
     this.httpURI = this.buildURI('http');
@@ -52,6 +40,7 @@ class Connection extends _eventemitter.default {
     this.socket = null;
     this.lastMessage = -1;
     this.isConnecting = false;
+    this.wsKeepaliveIntervalMs = this.options.wsKeepaliveInterval * 1000;
     this._fetchReady = false;
     this._bearerTokenPrefix = this.options.bearerTokenPrefix || 'Bearer';
     this._authenticated = false;
@@ -59,6 +48,7 @@ class Connection extends _eventemitter.default {
     this._connection = null;
     this._self = '';
     this._subscriptions = subscriptions;
+    this.sendKeepaliveWithReschedule = this.sendKeepaliveWithReschedule.bind(this);
     this.onWSMessage = this._onWSMessage.bind(this);
     this.onWSOpen = this._onWSOpen.bind(this);
     this.onWSClose = this._onWSClose.bind(this);
@@ -69,65 +59,60 @@ class Connection extends _eventemitter.default {
     };
     this.reconnect(true);
   }
-
   get retries() {
     return this._retries;
   }
-
   set self(data) {
     if (data !== null) {
       this.emit('self', data);
     }
-
     this._self = data;
   }
-
   get self() {
     return this._self;
   }
-
   set connectionInfo(data) {
     if (data !== null) {
       this.emit('connectionInfo', data);
     }
-
     this._connection = data;
     this.self = data.self;
   }
-
   get connectionInfo() {
     return this._connection;
   }
-
   buildURI(protocol) {
     const {
       useTLS,
       hostname,
       port,
       version,
-      deltaStreamBehaviour
+      deltaStreamBehaviour,
+      sendMeta
     } = this.options;
-    let uri = useTLS === true ? "".concat(protocol, "s://") : "".concat(protocol, "://");
+    let uri = useTLS === true ? `${protocol}s://` : `${protocol}://`;
     uri += hostname;
-    uri += port === 80 ? '' : ":".concat(port);
+    uri += port === 80 ? '' : `:${port}`;
     uri += '/signalk/';
     uri += version;
-
     if (protocol === 'ws') {
       uri += '/stream';
-
+      const params = [];
       if (deltaStreamBehaviour && SUPPORTED_STREAM_BEHAVIOUR.hasOwnProperty(deltaStreamBehaviour) && SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour] !== '') {
-        uri += "?subscribe=".concat(SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]);
+        params.push(`subscribe=${SUPPORTED_STREAM_BEHAVIOUR[deltaStreamBehaviour]}`);
+      }
+      if (sendMeta && SUPPORTED_SEND_META.hasOwnProperty(sendMeta) && SUPPORTED_SEND_META[sendMeta] !== '') {
+        params.push(`sendMeta=${SUPPORTED_SEND_META[sendMeta]}`);
+      }
+      if (params) {
+        uri += '?' + params.join('&');
       }
     }
-
     if (protocol === 'http') {
       uri += '/api';
     }
-
     return uri;
   }
-
   state() {
     return {
       connecting: this.isConnecting,
@@ -135,79 +120,63 @@ class Connection extends _eventemitter.default {
       ready: this.fetchReady
     };
   }
-
   disconnect() {
     debug('[disconnect] called');
     this.shouldDisconnect = true;
     this.reconnect();
   }
-
   backOffAndReconnect() {
     if (this.isConnecting === true) {
       return;
     }
-
     const {
       maxTimeBetweenRetries
     } = this.options;
     let waitTime = this._retries < Math.round(maxTimeBetweenRetries / 250) ? this._retries * 250 : maxTimeBetweenRetries;
-
     if (waitTime === 0) {
       return this.reconnect();
     }
-
     this.emit('backOffBeforeReconnect', waitTime);
-    debug("[backOffAndReconnect] waiting ".concat(waitTime, " ms before reconnecting"));
+    debug(`[backOffAndReconnect] waiting ${waitTime} ms before reconnecting`);
     setTimeout(() => this.reconnect(), waitTime);
   }
-
-  reconnect() {
-    let initial = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-
+  reconnect(initial = false) {
     if (this.isConnecting === true) {
       return;
     }
-
     if (this.socket !== null) {
       debug('[reconnect] closing socket');
       this.socket.close();
       return;
     }
-
     if (initial === false) {
       this._retries += 1;
     }
-
     if (initial !== true && this._retries === this.options.maxRetries) {
       this.emit('hitMaxRetries');
       this.cleanupListeners();
       return;
     }
-
     if (initial !== true && this.options.reconnect === false) {
       debug('[reconnect] Not reconnecting, for reconnect is false');
       this.cleanupListeners();
       return;
     }
-
     if (initial !== true && this.shouldDisconnect === true) {
       debug('[reconnect] not reconnecting, shouldDisconnect is true');
       this.cleanupListeners();
       return;
     }
-
-    debug("[reconnect] socket is ".concat(this.socket === null ? '' : 'not ', "NULL"));
+    debug(`[reconnect] socket is ${this.socket === null ? '' : 'not '}NULL`);
     this._fetchReady = false;
     this.shouldDisconnect = false;
     this.isConnecting = true;
-
     if (this.options.useAuthentication === false) {
       this._fetchReady = true;
       this.emit('fetchReady');
       this.initiateSocket();
       return;
     }
-
     const authRequest = {
       method: 'POST',
       mode: 'cors',
@@ -219,10 +188,9 @@ class Connection extends _eventemitter.default {
     };
     return this.fetch('/auth/login', authRequest).then(result => {
       if (!result || typeof result !== 'object' || !result.hasOwnProperty('token')) {
-        throw new Error("Unexpected response from auth endpoint: ".concat(JSON.stringify(result)));
+        throw new Error(`Unexpected response from auth endpoint: ${JSON.stringify(result)}`);
       }
-
-      debug("[reconnect] successful auth request: ".concat(JSON.stringify(result, null, 2)));
+      debug(`[reconnect] successful auth request: ${JSON.stringify(result, null, 2)}`);
       this._authenticated = true;
       this._token = {
         kind: typeof result.type === 'string' && result.type.trim() !== '' ? result.type : this._bearerTokenPrefix,
@@ -232,16 +200,14 @@ class Connection extends _eventemitter.default {
       this.emit('fetchReady');
       this.initiateSocket();
     }).catch(err => {
-      debug("[reconnect] error logging in: ".concat(err.message, ", reconnecting"));
+      debug(`[reconnect] error logging in: ${err.message}, reconnecting`);
       this.emit('error', err);
       this._retries += 1;
       this.isConnecting = false;
       return this.backOffAndReconnect();
     });
   }
-
-  setAuthenticated(token) {
-    let kind = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'JWT';
+  setAuthenticated(token, kind = 'JWT') {
     // @FIXME default type should be Bearer
     this.emit('fetchReady');
     this._authenticated = true;
@@ -250,7 +216,6 @@ class Connection extends _eventemitter.default {
       token
     };
   }
-
   initiateSocket() {
     if (isNode && this.options.useTLS && this.options.rejectUnauthorized === false) {
       this.socket = new _isomorphicWs.default(this.wsURI, {
@@ -259,16 +224,14 @@ class Connection extends _eventemitter.default {
     } else {
       this.socket = new _isomorphicWs.default(this.wsURI);
     }
-
     this.socket.addEventListener('message', this.onWSMessage);
     this.socket.addEventListener('open', this.onWSOpen);
     this.socket.addEventListener('error', this.onWSError);
     this.socket.addEventListener('close', this.onWSClose);
   }
-
   cleanupListeners() {
-    debug("[cleanupListeners] resetting auth and removing listeners"); // Reset authentication
-
+    debug(`[cleanupListeners] resetting auth and removing listeners`);
+    // Reset authentication
     this._authenticated = false;
     this._token = {
       kind: '',
@@ -276,45 +239,45 @@ class Connection extends _eventemitter.default {
     };
     this.removeAllListeners();
   }
-
+  sendKeepaliveWithReschedule() {
+    if (this.connected === true) {
+      if (this.lastMessage < Date.now() - this.wsKeepaliveIntervalMs) {
+        this.socket.send("{}");
+      }
+      setTimeout(this.sendKeepaliveWithReschedule, this.wsKeepaliveIntervalMs);
+    }
+  }
   _onWSMessage(evt) {
     this.lastMessage = Date.now();
     let data = evt.data;
-
     try {
       if (typeof data === 'string') {
         data = JSON.parse(data);
       }
     } catch (e) {
-      console.error("[Connection: ".concat(this.options.hostname, "] Error parsing data: ").concat(e.message));
+      console.error(`[Connection: ${this.options.hostname}] Error parsing data: ${e.message}`);
     }
-
     if (data && typeof data === 'object' && data.hasOwnProperty('name') && data.hasOwnProperty('version') && data.hasOwnProperty('roles')) {
       this.connectionInfo = data;
     }
-
     this.emit('message', data);
   }
-
   _onWSOpen() {
     this.connected = true;
     this.isConnecting = false;
-
     if (this._subscriptions.length > 0) {
       const subscriptions = flattenSubscriptions(this._subscriptions);
       this.subscribe(subscriptions);
     }
-
     this._retries = 0;
+    if (this.options.wsKeepaliveInterval > 0) this.sendKeepaliveWithReschedule();
     this.emit('connect');
   }
-
   _onWSError(err) {
     debug('[_onWSError] WS error', err.message || '');
     this.emit('error', err);
     this.backOffAndReconnect();
   }
-
   _onWSClose(evt) {
     debug('[_onWSClose] called with wsURI:', this.wsURI);
     this.socket.removeEventListener('message', this.onWSMessage);
@@ -327,13 +290,11 @@ class Connection extends _eventemitter.default {
     this.emit('disconnect', evt);
     this.backOffAndReconnect();
   }
-
   unsubscribe() {
     if (this.connected !== true || this.socket === null) {
       debug('Not connected to socket');
       return;
     }
-
     this.send(JSON.stringify({
       context: '*',
       unsubscribe: [{
@@ -341,34 +302,30 @@ class Connection extends _eventemitter.default {
       }]
     }));
   }
-
-  subscribe() {
-    let subscriptions = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-
+  subscribe(subscriptions = []) {
     if (!Array.isArray(subscriptions) && subscriptions && typeof subscriptions === 'object' && subscriptions.hasOwnProperty('subscribe')) {
       subscriptions = [subscriptions];
     }
-
     subscriptions.forEach(sub => {
       this.send(JSON.stringify(sub));
     });
   }
-
   send(data) {
     if (this.connected !== true || this.socket === null) {
       return Promise.reject(new Error('Not connected to WebSocket'));
-    } // Basic check if data is stringified JSON
+    }
 
-
+    // Basic check if data is stringified JSON
     if (typeof data === 'string') {
       try {
         data = JSON.parse(data);
       } catch (e) {
-        debug("[send] data is string but not valid JSON: ".concat(e.message));
+        debug(`[send] data is string but not valid JSON: ${e.message}`);
       }
     }
+    const isObj = data && typeof data === 'object';
 
-    const isObj = data && typeof data === 'object'; // FIXME: this shouldn't be required as per discussion about security.
+    // FIXME: this shouldn't be required as per discussion about security.
     // Add token to data IF authenticated
     // https://signalk.org/specification/1.3.0/doc/security.html#other-clients
     // if (isObj && this.useAuthentication === true && this._authenticated === true) {
@@ -382,88 +339,75 @@ class Connection extends _eventemitter.default {
     } catch (e) {
       return Promise.reject(e);
     }
-
-    debug("Sending data to socket: ".concat(data));
+    debug(`Sending data to socket: ${data}`);
     const result = this.socket.send(data);
     return Promise.resolve(result);
   }
-
   fetch(path, opts) {
     if (path.charAt(0) !== '/') {
-      path = "/".concat(path);
+      path = `/${path}`;
     }
-
     if (!opts || typeof opts !== 'object') {
       opts = {
         method: 'GET'
       };
     }
-
     if (!opts.headers || typeof opts.headers !== 'object') {
       opts.headers = {
         Accept: 'application/json',
         'Content-Type': 'application/json'
       };
     }
-
     if (this._authenticated === true && !path.includes('auth/login')) {
-      opts.headers = _objectSpread(_objectSpread({}, opts.headers), {}, {
-        Authorization: "".concat(this._token.kind, " ").concat(this._token.token)
-      });
+      opts.headers = {
+        ...opts.headers,
+        Authorization: `${this._token.kind} ${this._token.token}`
+      };
       opts.credentials = 'same-origin';
       opts.mode = 'cors';
-      debug("[fetch] enriching fetch options with in-memory token");
+      debug(`[fetch] enriching fetch options with in-memory token`);
     }
-
     if (isNode && this.options.useTLS && this.options.rejectUnauthorized === false) {
       opts.agent = new _https.default.Agent({
         rejectUnauthorized: false
       });
     }
+    let URI = `${this.httpURI}${path}`;
 
-    let URI = "".concat(this.httpURI).concat(path); // @TODO httpURI includes /api, which is not desirable. Need to refactor
-
+    // @TODO httpURI includes /api, which is not desirable. Need to refactor
     if (URI.includes('/api/auth/login')) {
       URI = URI.replace('/api/auth/login', '/auth/login');
-    } // @TODO httpURI includes /api, which is not desirable. Need to refactor
+    }
 
-
+    // @TODO httpURI includes /api, which is not desirable. Need to refactor
     if (URI.includes('/api/access/requests')) {
       URI = URI.replace('/api/access/requests', '/access/requests');
-    } // @FIXME weird hack because node server paths for access requests are not standardised
+    }
 
-
+    // @FIXME weird hack because node server paths for access requests are not standardised
     if (URI.includes('/signalk/v1/api/security')) {
       URI = URI.replace('/signalk/v1/api/security', '/security');
     }
-
-    debug("[fetch] ".concat(opts.method || 'GET', " ").concat(URI, " ").concat(JSON.stringify(opts, null, 2)));
+    debug(`[fetch] ${opts.method || 'GET'} ${URI} ${JSON.stringify(opts, null, 2)}`);
     return (0, _crossFetch.default)(URI, opts).then(response => {
       if (!response.ok) {
-        throw new Error("Error fetching ".concat(URI, ": ").concat(response.status, " ").concat(response.statusText));
+        throw new Error(`Error fetching ${URI}: ${response.status} ${response.statusText}`);
       }
-
       const type = response.headers.get('content-type');
-
       if (type.includes('application/json')) {
         return response.json();
       }
-
       return response.text();
     });
   }
-
 }
-
 exports.default = Connection;
-
 const flattenSubscriptions = subscriptionCommands => {
   const commandPerContext = {};
   subscriptionCommands.forEach(command => {
     if (!Array.isArray(commandPerContext[command.context])) {
       commandPerContext[command.context] = [];
     }
-
     commandPerContext[command.context] = commandPerContext[command.context].concat(command.subscribe);
   });
   return Object.keys(commandPerContext).map(context => {
@@ -471,7 +415,6 @@ const flattenSubscriptions = subscriptionCommands => {
       context,
       subscribe: commandPerContext[context]
     };
-
     if (subscription.subscribe.length > 0) {
       const paths = [];
       subscription.subscribe = subscription.subscribe.reduce((list, command) => {
@@ -479,17 +422,14 @@ const flattenSubscriptions = subscriptionCommands => {
           paths.push(command.path);
         } else {
           const index = list.findIndex(candidate => candidate.path === command.path);
-
           if (index !== -1) {
             list.splice(index, 1);
           }
         }
-
         list.push(command);
         return list;
       }, []);
     }
-
     return subscription;
   });
 };

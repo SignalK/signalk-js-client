@@ -31,6 +31,7 @@
     "bonjour": "^3.5.0",
     "casper-chai": "^0.3.0",
     "chai": "^4.1.0",
+    "core-js": "^3.6.5",
     "freeport-promise": "^1.1.0",
     "mdns": "^2.5.1",
     "mocha": "^7.2.0",
